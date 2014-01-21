@@ -1,0 +1,37 @@
+{
+  "name": "clever-auth",
+  "version": "0.0.1",
+  "dependencies": {
+    "passport": "~0.1.18",
+    "passport-facebook": "~1.0.2",
+    "passport-local": "~0.1.6",
+    "connect-redis": "~1.4.6",
+    "connect": "~2.12.0",
+    "redis": "~0.10.0"
+  },
+  "author": {
+    "name": "Clevertech",
+    "email": "info@clevertech.biz",
+    "web": "http://www.clevertech.biz"
+  },
+  "collaborators": [
+    "Richard Gustin <richard@clevertech.biz>"
+  ],
+  "description": "Clevertech Authentication Module",
+  "keywords": [
+    "cleverstack",
+    "clevertech",
+    "cleverstack-module",
+    "cleverstack-backend"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/CleverStack/clever-auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CleverStack/clever-auth/issues"
+  },
+  "main": "module.js",
+  "devDependencies": {}
+}

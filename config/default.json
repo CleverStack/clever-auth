@@ -1,5 +1,5 @@
 {
-    "auth": {
+    "clever-auth": {
         "secretKey": "youMustChangeMe",
 
         "redis": {
@@ -7,6 +7,10 @@
             "port": "6379",
             "prefix": "",
             "key": ""
-        }
+        },
+
+        "hostUrl": "http://localhost:",
+
+        "email_confirmation": false
     }
 }

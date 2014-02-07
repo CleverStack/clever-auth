@@ -34,5 +34,7 @@
     "url": "https://github.com/CleverStack/clever-auth/issues"
   },
   "main": "module.js",
-  "devDependencies": {}
+  "devDependencies": {
+    "grunt": "~0.4.2"
+  }
 }

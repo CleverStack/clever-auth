@@ -36,5 +36,8 @@
   "main": "module.js",
   "devDependencies": {
     "grunt": "~0.4.2"
-  }
+  },
+  "bundledDependencies": [
+    "clever-orm"
+  ]
 }

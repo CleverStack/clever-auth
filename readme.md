@@ -7,5 +7,6 @@ Provides authentication for your CleverStack app.
 
 ## Test Account Credentials
 
-username: test
-password: password
+
+username: `test` <br>
+password: `password`

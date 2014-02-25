@@ -1,4 +1,7 @@
 # Cleverstack Auth module
+
+[![Build Status](http://img.shields.io/travis/CleverStack/clever-auth.svg)](https://travis-ci.org/CleverStack/clever-auth) [![Dependency Status](https://david-dm.org/CleverStack/clever-auth.svg?theme=shields.io)](https://david-dm.org/CleverStack/clever-auth) [![devDependency Status](https://david-dm.org/CleverStack/clever-auth/dev-status.svg?theme=shields.io)](https://david-dm.org/CleverStack/clever-auth#info=devDependencies) [![CleverTech](http://img.shields.io/badge/clever-tech-ff9933.svg)](http://www.clevertech.biz/)
+
 Provides authentication for your CleverStack app.
 
 ## Setup

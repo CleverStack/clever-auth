@@ -17,8 +17,5 @@ before_script:
   - export NODE_PATH=./lib/:./modules/
   - cd testProject/backend
 
-script:
-  - grunt test:unit
-
 services:
   - mysql

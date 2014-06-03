@@ -28,6 +28,10 @@ module.exports = function ( UserService ) {
 
     return (require( 'classes' ).Controller).extend(
         {
+            route: '/users',
+            
+            autoRouting: [ 'requiresLogin' ],
+
             service: UserService,
 
             requiresLogin: function ( req, res, next ) {

@@ -3,7 +3,11 @@ module.exports = function (
 //    AccountController,
     UserController )
 {
-    app.all( '/user/current', UserController.attach() );
+
+    app.get('/users',               UserController.requiresLogin,               UserController.attach());
+    app.all('/users/?:id?',         UserController.requiresLogin,               UserController.attach());
+
+    app.all('/user/?:action?',      UserController.attach());
 
 //    app.post('/users/confirm',      UserController.checkPasswordRecoveryData,   UserController.attach());
 //    app.get('/users/:id',           UserController.requiresLogin,               UserController.isUserInTheSameAccount, UserController.attach());

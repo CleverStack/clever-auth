@@ -28,9 +28,10 @@ module.exports = function ( UserService ) {
 
     return (require( 'classes' ).Controller).extend(
         {
-            route: '/users',
-            
-            autoRouting: [ 'requiresLogin' ],
+            // route: '/user',
+
+            // autoRouting: [ 'requiresLogin' ],
+            autoRouting: false,
 
             service: UserService,
 

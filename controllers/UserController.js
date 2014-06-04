@@ -41,9 +41,12 @@ module.exports = function ( UserService ) {
                         : false
                   , route = parts
                         ? parts.pop()
+                        : false
+                  , method = req.method
+                        ? req.method.toLowerCase()
                         : false;
                 
-                if ( req.isAuthenticated() || ( route === 'user' && ( action === 'login' || action === 'current' ) ) ) {
+                if ( req.isAuthenticated() || ( route === 'user' && ( method === 'post' || action === 'login' || action === 'current' ) ) ) {
                     return next();
                 }
 

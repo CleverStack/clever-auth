@@ -1,12 +1,33 @@
 var Q = require( 'q' )
   , crypto = require( 'crypto' )
   , moment = require( 'moment' )
-  , Sequelize = require( 'sequelize' )
   , config = require( 'config' )
-  , UserService = null;
+  , moduleLoader = injector.getInstance( 'moduleLoader' )
+  , UserService = null
+  , UserModel = null
+  , db = null;
 
-module.exports = function ( sequelize,
-                            ORMUserModel ) {
+module.exports = function ( cleverAuth ) {
+    var driver = cleverAuth.config.driver.toLowerCase();
+
+    if ( driver === 'orm' ) {
+        if ( moduleLoader.moduleIsEnabled( 'clever-orm' ) === true ) {
+            var Sequelize = injector.getInstance( 'Sequelize' );
+            db = injector.getInstance( 'sequelize' );
+            UserModel = cleverAuth.models.orm.UserModel;
+        } else {
+            throw new Error( "To use the clever-auth module with the ORM driver you need to install the clever-orm module. (clever install clever-orm)" );
+        }
+    } else if ( driver === 'odm' ) {
+        if ( moduleLoader.moduleIsEnabled( 'clever-odm' ) === true ) {
+            db = injector.getInstance( 'mongoose' );
+            UserModel = cleverAuth.models.odm.UserModel;
+        } else {
+            throw new Error( "To use the clever-auth module with the ODM driver you need to install the clever-odm module. (clever install clever-odm)" );
+        }
+    } else {
+        throw new Error( "To use the clever-auth module you need to specify a valid driver (ORM or ODM) in your config." );
+    }
 
     if ( UserService && UserService.instance ) {
         return UserService.instance;
@@ -21,7 +42,7 @@ module.exports = function ( sequelize,
               , service = this
               , chainer = new Sequelize.Utils.QueryChainer();
 
-            ORMUserModel
+            UserModel
                 .find( { where: credentials } )
                 .success( function ( user ) {
 
@@ -50,7 +71,7 @@ module.exports = function ( sequelize,
             var deferred = Q.defer()
               , service = this;
 
-            ORMUserModel
+            UserModel
                 .find( { where: options } )
                 .success( function ( user ) {
 
@@ -162,7 +183,7 @@ module.exports = function ( sequelize,
               , service = this
               , usr;
 
-            ORMUserModel
+            UserModel
                 .find( { where: { email: data.email } } )
                 .success( function ( user ) {
 
@@ -220,7 +241,7 @@ module.exports = function ( sequelize,
                 ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
                 : Math.random().toString( 36 ).slice( -14 );
 
-            ORMUserModel
+            UserModel
                 .create( data )
                 .success( deferred.resolve )
                 .error( deferred.reject );
@@ -232,7 +253,7 @@ module.exports = function ( sequelize,
             var deferred = Q.defer()
               , service = this;
 
-            ORMUserModel
+            UserModel
                 .find( userId )
                 .success( function ( user ) {
 
@@ -266,7 +287,7 @@ module.exports = function ( sequelize,
         handleUpdateUser: function ( userId, data ) {
             var deferred = Q.defer();
 
-            ORMUserModel
+            UserModel
                 .find( { where: { id: userId } } )
                 .success( function ( user ) {
 
@@ -301,7 +322,7 @@ module.exports = function ( sequelize,
 
             if ( data.email && ( user.email != data.email ) ) {
 
-                ORMUserModel
+                UserModel
                     .find( { where: { email: data.email } } )
                     .success( function ( chkUser ) {
 
@@ -357,7 +378,7 @@ module.exports = function ( sequelize,
         listUsers: function() {
             var deferred = Q.defer();
 
-            ORMUserModel
+            UserModel
                 .findAll( { where: { deletedAt: null } } )
                 .success( function( users ) {
                     if ( !!users && !!users.length ) {
@@ -374,7 +395,7 @@ module.exports = function ( sequelize,
         deleteUser: function( userId ) {
             var deferred = Q.defer();
 
-            ORMUserModel
+            UserModel
                 .find( userId )
                 .success( function( user ) {
 
@@ -404,8 +425,8 @@ module.exports = function ( sequelize,
 
     } );
 
-    UserService.instance = new UserService( sequelize );
-    UserService.Model = ORMUserModel;
+    UserService.instance = new UserService( db );
+    UserService.Model = UserModel;
 
     return UserService.instance;
 };

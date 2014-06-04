@@ -26,22 +26,22 @@ module.exports = function ( UserService ) {
             .fail( done );
     } ) );
 
-    return (require( 'classes' ).Controller).extend(
+    return ( require( 'classes' ).Controller ).extend(
         {
-            // route: '/user',
-
-            // autoRouting: [ 'requiresLogin' ],
-            autoRouting: false,
+            autoRouting: [ 'requiresLogin' ],
 
             service: UserService,
 
             requiresLogin: function ( req, res, next ) {
+                var parts = req.url.split('/')
+                  , action = parts.pop()
+                  , route = parts.pop();
 
-                if ( !req.isAuthenticated() ) {
-                    return res.send( 401 );
+                if ( req.isAuthenticated() || ( route === 'user' && ( action === 'login' || action === 'current' ) ) ) {
+                    return next();
                 }
 
-                next();
+                res.send( 401 );
             }, //tested
 
             requiresAdminRights: function ( req, res, next ) {

@@ -89,35 +89,21 @@ Module = ModuleClass.extend( {
             password: this.config.redis.key
         } );
 
-        // Session management
+        // Bring in the cookie parser
         app.use( express.cookieParser() );
-        app.use( express.session( {
-            secret: this.config.secretKey,
-            cookie: { secure: false, maxAge: 86400000 },
-            store: this.store
-        } ) );
-
-        // Enable CORS
-        app.use( this.proxy( 'enableCors' ) );
+        
+        // Session management
+        app.use( 
+            express.session( {
+                secret: this.config.secretKey,
+                cookie: { secure: false, maxAge: 86400000 },
+                store: this.store
+            })
+        );
 
         // Initialize passport
         app.use( passport.initialize() );
         app.use( passport.session() );
-    },
-
-    enableCors: function ( req, res, next ) {
-        res.header( "Access-Control-Allow-Origin", req.headers.origin );
-        res.header( "Access-Control-Allow-Headers", "x-requested-with, content-type" );
-        res.header( "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS" );
-        res.header( "Access-Control-Allow-Credentials", "true" );
-        res.header( "Access-Control-Max-Age", "1000000000" );
-        // intercept OPTIONS method
-        if ( 'OPTIONS' == req.method ) {
-            res.send( 200 );
-        }
-        else {
-            next();
-        }
     },
 
     preShutdown: function () {

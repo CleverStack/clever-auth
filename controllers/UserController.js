@@ -33,10 +33,16 @@ module.exports = function ( UserService ) {
             service: UserService,
 
             requiresLogin: function ( req, res, next ) {
-                var parts = req.url.split('/')
-                  , action = parts.pop()
-                  , route = parts.pop();
-
+                var parts = req.url 
+                        ? req.url.split('/')
+                        : false
+                  , action = parts
+                        ? parts.pop()
+                        : false
+                  , route = parts
+                        ? parts.pop()
+                        : false;
+                
                 if ( req.isAuthenticated() || ( route === 'user' && ( action === 'login' || action === 'current' ) ) ) {
                     return next();
                 }

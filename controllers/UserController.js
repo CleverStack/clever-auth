@@ -36,7 +36,7 @@ module.exports = function ( UserService ) {
                 var parts = req.url 
                         ? req.url.split('/')
                         : false
-                  , action = parts
+                  , action = parts && parts.length > 2
                         ? parts.pop()
                         : false
                   , route = parts

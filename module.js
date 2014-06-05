@@ -29,13 +29,17 @@ Module = ModuleClass.extend({
     configureApp: function ( app, express ) {
         debug( 'Setting up session management...' );
 
-        // Session management
+        // Bring in the cookie parser
         app.use( express.cookieParser() );
-        app.use( express.session( {
-            secret: this.config.secretKey,
-            cookie: { secure: false, maxAge: 86400000 },
-            store: this.store
-        } ) );
+        
+        // Session management
+        app.use( 
+            express.session( {
+                secret: this.config.secretKey,
+                cookie: { secure: false, maxAge: 86400000 },
+                store: this.store
+            })
+        );
 
         // Initialize passport
         app.use( passport.initialize() );

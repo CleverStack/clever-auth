@@ -26,17 +26,31 @@ module.exports = function ( UserService ) {
             .catch( done );
     } ) );
 
-    return (require( 'classes' ).Controller).extend(
+    return ( require( 'classes' ).Controller ).extend(
         {
+            autoRouting: [ 'requiresLogin' ],
+
             service: UserService,
 
             requiresLogin: function ( req, res, next ) {
-
-                if ( !req.isAuthenticated() ) {
-                    return res.send( 401 );
+                var parts = req.url 
+                        ? req.url.split('/')
+                        : false
+                  , action = parts && parts.length > 2
+                        ? parts.pop()
+                        : false
+                  , route = parts
+                        ? parts.pop()
+                        : false
+                  , method = req.method
+                        ? req.method.toLowerCase()
+                        : false;
+                
+                if ( req.isAuthenticated() || ( route === 'user' && ( method === 'post' || action === 'login' || action === 'current' ) ) ) {
+                    return next();
                 }
 
-                next();
+                res.send( 401 );
             }, //tested
 
             requiresAdminRights: function ( req, res, next ) {

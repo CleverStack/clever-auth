@@ -51,10 +51,9 @@ module.exports = function( grunt ) {
             }
         }
     }, function( grunt ) {
-        grunt.loadNpmTasks('grunt-prompt');
+        grunt.loadNpmTasks( 'grunt-prompt' );
 
-        grunt.registerTask( 'prompt:createAuthSeedData', [ 'prompt:authSeedData', 'authSeedData' ] );
-        grunt.registerTask( 'prompt:cleverCreateAuthSeedData', [ 'prompt:createAuthSeedData' ] );
+        grunt.registerTask( 'prompt:cleverAuthSeedData', [ 'prompt:authSeedData', 'authSeedData' ] );
         grunt.registerTask( 'authSeedData', 'Creates seed data for clever-auth module', function ( ) {
             var conf = grunt.config( 'cleverauth' )
               , obj  = {
@@ -70,7 +69,6 @@ module.exports = function( grunt ) {
             conf.confirmed = true;
             conf.hasAdminRight = true;
             conf.password = crypto.createHash( 'sha1' ).update( conf.password ).digest( 'hex' );
-
 
             if ( obj[ 'UserModel' ][ 0 ] && obj[ 'UserModel' ][ 0 ].username === 'test' ) {
                 obj[ 'UserModel' ].shift();

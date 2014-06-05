@@ -1,6 +1,6 @@
 {
   "name": "clever-auth",
-  "version": "0.0.9",
+  "version": "0.2.0",
   "dependencies": {
     "passport": "^0.2.0",
     "passport-facebook": "~1.0.2",
@@ -14,9 +14,9 @@
     "test": "grunt test:unit"
   },
   "author": {
-    "name": "Clevertech",
-    "email": "info@clevertech.biz",
-    "web": "http://www.clevertech.biz"
+    "name": "CleverStack",
+    "email": "admin@cleverstack.io",
+    "web": "http://cleverstack.io"
   },
   "collaborators": [
     "Richard Gustin <richard@clevertech.biz>"

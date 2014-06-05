@@ -3,31 +3,13 @@ var Q = require( 'q' )
   , moment = require( 'moment' )
   , config = require( 'config' )
   , moduleLoader = injector.getInstance( 'moduleLoader' )
+  , Promise = require( 'bluebird' )
   , UserService = null
   , UserModel = null
   , db = null;
 
-module.exports = function ( cleverAuth ) {
+module.exports = function ( cleverAuth, UserModel ) {
     var driver = cleverAuth.config.driver.toLowerCase();
-
-    if ( driver === 'orm' ) {
-        if ( moduleLoader.moduleIsEnabled( 'clever-orm' ) === true ) {
-            var Sequelize = injector.getInstance( 'Sequelize' );
-            db = injector.getInstance( 'sequelize' );
-            UserModel = cleverAuth.models.orm.UserModel;
-        } else {
-            throw new Error( "To use the clever-auth module with the ORM driver you need to install the clever-orm module. (clever install clever-orm)" );
-        }
-    } else if ( driver === 'odm' ) {
-        if ( moduleLoader.moduleIsEnabled( 'clever-odm' ) === true ) {
-            db = injector.getInstance( 'mongoose' );
-            UserModel = cleverAuth.models.odm.UserModel;
-        } else {
-            throw new Error( "To use the clever-auth module with the ODM driver you need to install the clever-odm module. (clever install clever-odm)" );
-        }
-    } else {
-        throw new Error( "To use the clever-auth module you need to specify a valid driver (ORM or ODM) in your config." );
-    }
 
     if ( UserService && UserService.instance ) {
         return UserService.instance;
@@ -67,26 +49,17 @@ module.exports = function ( cleverAuth ) {
             return deferred.promise;
         }, //tested
 
-        getUserFullDataJson: function ( options ) {
-            var deferred = Q.defer()
-              , service = this;
-
-            UserModel
-                .find( { where: options } )
-                .success( function ( user ) {
-
-                    if ( !user ) {
-                        return deferred.resolve( {} );
-                    }
-
-                    var userJson = JSON.parse( JSON.stringify( user ) );
-
-                    deferred.resolve( userJson );
-                } )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
+        //tested
+        getUserFullDataJson: function ( id ) {
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( id )
+                    .then( function( user ) {
+                        resolve( !user ? user : JSON.parse( JSON.stringify( user ) ) );
+                    })
+                    .catch( reject );
+            });
+        },
 
         generatePasswordResetHash: function ( user, tplData ) {
             var deferred = Q.defer()
@@ -376,20 +349,17 @@ module.exports = function ( cleverAuth ) {
         }, //tested
 
         listUsers: function() {
-            var deferred = Q.defer();
-
-            UserModel
-                .findAll( { where: { deletedAt: null } } )
-                .success( function( users ) {
-                    if ( !!users && !!users.length ) {
-                        deferred.resolve( users.map( function( u ) { return u.toJSON(); } ) );
-                    } else {
-                        deferred.resolve( {} );
-                    }
-                })
-                .error( deferred.reject );
-
-            return deferred.promise;
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .findAll()
+                    .then( function( users ) {
+                        resolve( !users && !users.length 
+                            ? false
+                            : users.map( function( u ) { return u.toJSON(); } )
+                        );
+                    })
+                    .catch( reject );
+            });
         }, //tested
 
         deleteUser: function( userId ) {
@@ -425,7 +395,7 @@ module.exports = function ( cleverAuth ) {
 
     } );
 
-    UserService.instance = new UserService( db );
+    UserService.instance = new UserService( UserModel._db );
     UserService.Model = UserModel;
 
     return UserService.instance;

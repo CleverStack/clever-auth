@@ -23,7 +23,7 @@ module.exports = function ( UserService ) {
 
         UserService.authenticate( credentials )
             .then( done.bind( null, null ) )
-            .fail( done );
+            .catch( done );
     } ) );
 
     return (require( 'classes' ).Controller).extend(
@@ -72,15 +72,13 @@ module.exports = function ( UserService ) {
             listAction: function () {
                 UserService.listUsers()
                     .then( this.proxy( 'handleServiceMessage' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
             }, //tested
 
             getAction: function () {
-                var uId = this.req.params.id;
-
-                UserService.getUserFullDataJson( { id: uId } )
+                UserService.getUserFullDataJson( this.req.params.id )
                     .then( this.proxy( 'handleServiceMessage' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
             }, //tested
 
             postAction: function () {
@@ -106,7 +104,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .createUser( data, tplData )
                     .then( this.proxy( 'handleServiceMessage' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
             }, //tested without email confirmation
 
             putAction: function () {
@@ -122,7 +120,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .handleUpdateUser( userId, data )
                     .then( this.proxy( 'handleSessionUpdate', meId ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             }, //tested
 
@@ -140,7 +138,7 @@ module.exports = function ( UserService ) {
 
                 UserService.deleteUser( uId )
                     .then( this.proxy( 'handleServiceMessage' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             }, //tested
 
@@ -180,7 +178,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .getUserFullDataJson( { id: user.id } )
                     .then( this.proxy( 'loginUserJson' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             }, //tested
 
@@ -200,7 +198,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .find( { where: { email: email } } )
                     .then( this.proxy( 'handlePasswordRecovery' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
             },
 
             handlePasswordRecovery: function ( user ) {
@@ -213,7 +211,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .generatePasswordResetHash( user[0] )
                     .then( this.proxy( 'handleMailRecoveryToken' ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             },
 
@@ -227,7 +225,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .mailPasswordRecoveryToken( recoverData )
                     .then( this.proxy( "handleServiceMessage" ) )
-                    .fail( this.proxy( "handleException" ) );
+                    .catch( this.proxy( "handleException" ) );
             },
 
             resetAction: function () {
@@ -238,7 +236,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .findById( userId )
                     .then( this.proxy( 'handlePasswordReset', password, token ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             },
 
@@ -252,7 +250,7 @@ module.exports = function ( UserService ) {
                 UserService
                     .generatePasswordResetHash( user )
                     .then( this.proxy( 'verifyResetTokenValidity', user, password, token ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             },
 
@@ -281,7 +279,7 @@ module.exports = function ( UserService ) {
                     } ).success( function ( user ) {
                             this.send( {status: 200, results: user} );
                         }.bind( this )
-                        ).fail( this.proxy( 'handleException' ) );
+                        ).catch( this.proxy( 'handleException' ) );
                 } else {
                     this.send( {status: 400, error: "Incorrect old password!"} );
                 }
@@ -295,7 +293,7 @@ module.exports = function ( UserService ) {
 
                 UserService.findById( userId )
                     .then( this.proxy( 'handleAccountConfirmation', password, token ) )
-                    .fail( this.proxy( 'handleException' ) );
+                    .catch( this.proxy( 'handleException' ) );
 
             },
 
@@ -311,7 +309,7 @@ module.exports = function ( UserService ) {
 
                 UserService.generatePasswordResetHash( user )
                     .then( this.proxy( "confirmAccount", user, pass, token ) )
-                    .fail( this.proxy( "handleException" ) );
+                    .catch( this.proxy( "handleException" ) );
 
             },
 

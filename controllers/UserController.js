@@ -1,17 +1,16 @@
 var crypto = require( 'crypto' )
   , moment = require( 'moment' )
-  , passport = require( 'passport' )
   , LocalStrategy = require( 'passport-local' ).Strategy;
 
-module.exports = function ( UserService ) {
+module.exports = function ( Controller, passport, UserService ) {
 
     passport.serializeUser( function ( user, done ) {
         done( null, user );
-    } );
+    });
 
     passport.deserializeUser( function ( user, done ) {
         done( null, user )
-    } );
+    });
 
     passport.use( new LocalStrategy( function ( username, password, done ) {
         var credentials = {
@@ -24,9 +23,9 @@ module.exports = function ( UserService ) {
         UserService.authenticate( credentials )
             .then( done.bind( null, null ) )
             .catch( done );
-    } ) );
+    }));
 
-    return ( require( 'classes' ).Controller ).extend(
+    return Controller.extend(
         {
             autoRouting: [ 'requiresLogin' ],
 

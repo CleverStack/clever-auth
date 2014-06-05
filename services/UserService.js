@@ -4,50 +4,43 @@ var Q = require( 'q' )
   , config = require( 'config' )
   , moduleLoader = injector.getInstance( 'moduleLoader' )
   , Promise = require( 'bluebird' )
+  , BaseService = require( 'services' ).BaseService
+  , EmailService = null
   , UserService = null
   , UserModel = null
   , db = null;
 
-module.exports = function ( cleverAuth, UserModel ) {
-    var driver = cleverAuth.config.driver.toLowerCase();
-
+module.exports = function ( UserModel ) {
     if ( UserService && UserService.instance ) {
         return UserService.instance;
     }
 
-    var EmailService = null;
+    UserService = BaseService.extend( {
 
-    UserService = require( 'services' ).BaseService.extend( {
-
+        //tested
         authenticate: function ( credentials ) {
-            var deferred = Q.defer()
-              , service = this
-              , chainer = new Sequelize.Utils.QueryChainer();
-
-            UserModel
-                .find( { where: credentials } )
-                .success( function ( user ) {
-
-                    if ( !user || !user.active ) {
-                        return deferred.resolve();
-                    }
-
-                    chainer.add( user.updateAttributes( { accessedAt: moment.utc().format( 'YYYY-MM-DD HH:ss:mm' )  } ) );
-
-                    chainer
-                        .runSerially()
-                        .success( function ( result ) {
-
-                            var userJson = ( result[0] ) ? JSON.parse( JSON.stringify( result[0] ) ) : {};
-
-                            deferred.resolve( userJson );
-                        } )
-                        .error( deferred.reject );
-                } )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( credentials )
+                    .then( function( user ) {
+                        if ( !!user && !!user.id ) {
+                            if ( !!user.active ) {
+                                user.accessedAt = Date.now();
+                                user.save()
+                                    .then( function( user ) {
+                                        resolve( JSON.parse( JSON.stringify( user ) ) );
+                                    })
+                                    .catch( reject );
+                            } else {
+                                resolve( { statuscode: 403, message: "Login is not active for " + user.email + '.' }  );
+                            }
+                        } else {
+                            resolve( { statuscode: 403, message: "User doesn't exist." }  );
+                        }
+                    })
+                    .catch( reject );
+            });
+        },
 
         //tested
         getUserFullDataJson: function ( id ) {
@@ -55,42 +48,46 @@ module.exports = function ( cleverAuth, UserModel ) {
                 UserModel
                     .find( id )
                     .then( function( user ) {
-                        resolve( !user ? user : JSON.parse( JSON.stringify( user ) ) );
+                        if ( !!user && !!user.id ) {
+                            resolve( JSON.parse( JSON.stringify( user ) ) );
+                        } else {
+                            resolve( { statuscode: 403, message: "User doesn't exist." }  );
+                        }
                     })
                     .catch( reject );
             });
         },
 
+        //tested
         generatePasswordResetHash: function ( user, tplData ) {
-            var deferred = Q.defer()
-              , md5 = null
-              , hash = null
-              , expTime = null
-              , actionpath = ( !user.confirmed ) ? 'user/confirm' : 'password_reset_submit'
-              , mailsubject = ( !user.confirmed ) ? 'User Confirmation' : 'Password Recovery';
+            return new Promise( function( resolve, reject ) {
+                var md5 = null
+                  , hash = null
+                  , expTime = null
+                  , actionpath = ( !user.confirmed ) ? 'user/confirm' : 'password_reset_submit'
+                  , mailsubject = ( !user.confirmed ) ? 'User Confirmation' : 'Password Recovery';
 
-            if ( !user || !user.createdAt || !user.updatedAt || !user.password || !user.email ) {
-                deferred.resolve( { statuscode: 403, message: 'Unauthorized' } );
-            } else {
+                if ( !user || !user.createdAt || !user.updatedAt || !user.password || !user.email ) {
+                    resolve( { statuscode: 403, message: 'Unauthorized' } );
+                } else {
+                    md5 = crypto.createHash( 'md5' );
+                    md5.update( user.createdAt + user.updatedAt + user.password + user.email + 'recover', 'utf8' );
+                    hash = md5.digest( 'hex' );
+                    expTime = moment.utc().add( 'hours', 8 ).valueOf();
 
-                md5 = crypto.createHash( 'md5' );
-                md5.update( user.createdAt + user.updatedAt + user.password + user.email + 'recover', 'utf8' );
-                hash = md5.digest( 'hex' );
+                    resolve({
+                        hash: hash,
+                        expTime: expTime,
+                        user: user,
+                        action: actionpath,
+                        mailsubject: mailsubject,
+                        tplData: tplData || null
+                    });
+                }
+            });
+        },
 
-                expTime = moment.utc().add( 'hours', 8 ).valueOf();
-
-                deferred.resolve( {
-                    hash: hash,
-                    expTime: expTime,
-                    user: user,
-                    action: actionpath,
-                    mailsubject: mailsubject,
-                    tplData: tplData || null
-                } );
-            }
-            return deferred.promise;
-        }, //tested
-
+        // @todo this needs allot of work to get it working as expected
         mailPasswordRecoveryToken: function ( obj ) {
 
 //            var hosturl = !!config.hosturl
@@ -151,110 +148,105 @@ module.exports = function ( cleverAuth, UserModel ) {
                 } );
         },
 
+        //tested
         createUser: function ( data, tplData ) {
-            var deferred = Q.defer()
-              , service = this
+            var service = this
               , usr;
 
-            UserModel
-                .find( { where: { email: data.email } } )
-                .success( function ( user ) {
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( { email: data.email } )
+                    .then( function( user ) {
 
-                    if ( user !== null ) {
-                        deferred.resolve( { statuscode: 400, message: 'Email already exist' } );
-                        return;
-                    }
+                        if ( user !== null ) {
+                            return resolve( { statuscode: 400, message: 'Email already exist' } );
+                        }
 
-                    try {
-                        EmailService = require( 'services' )['EmailService'];
-                    } catch ( err ) {
-                        console.log( err );
-                    }
+                        try {
+                            EmailService = require( 'services' )[ 'EmailService' ];
+                        } catch ( err ) {
+                            console.error( err );
+                        }
 
-                    if ( EmailService === null || !config['clever-auth'].email_confirmation ) {
+                        if ( EmailService === null || !config[ 'clever-auth' ].email_confirmation ) {
 
-                        data.confirmed = true;
+                            data.confirmed = true;
 
-                        service
-                            .saveNewUser( data )
-                            .then( deferred.resolve )
-                            .fail( deferred.reject );
+                            service
+                                .saveNewUser( data )
+                                .then( resolve )
+                                .catch( reject );
 
-                    } else {
+                        } else {
 
-                        data.confirmed = false;
+                            data.confirmed = false;
 
-                        service
-                            .saveNewUser( data )
-                            .then( function ( user ) {
-                                usr = user;
-                                return service.generatePasswordResetHash( user, tplData );
-                            } )
-                            .then( service.mailPasswordRecoveryToken )
-                            .then( function () {
-                                deferred.resolve( usr );
-                            } )
-                            .fail( function ( err ) {
-                                console.log( err );
-                                deferred.reject();
-                            } );
-                    }
-                } )
-                .error( deferred.reject );
+                            service
+                                .saveNewUser( data )
+                                .then( function( user ) {
+                                    usr = user;
+                                    return service.generatePasswordResetHash( user, tplData );
+                                })
+                                .then( service.mailPasswordRecoveryToken )
+                                .then( function() {
+                                    resolve( usr );
+                                } )
+                                .catch( reject );
+                        }
+                    })
+                    .catch( reject );
 
-            return deferred.promise;
-        }, //tested
+            });
+        }, 
 
+        //tested
         saveNewUser: function ( data ) {
-            var deferred = Q.defer();
+            return new Promise( function( resolve, reject ) {
+                data.username = data.username || data.email;
+                data.active = true;
+                data.password = data.password
+                    ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
+                    : Math.random().toString( 36 ).slice( -14 );
 
-            data.username = data.username || data.email;
-            data.active = true;
-            data.password = data.password
-                ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
-                : Math.random().toString( 36 ).slice( -14 );
-
-            UserModel
-                .create( data )
-                .success( deferred.resolve )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
+                UserModel
+                    .create( data )
+                    .then( resolve )
+                    .catch( reject );
+            });
+        },
 
         resendAccountConfirmation: function ( userId, tplData ) {
-            var deferred = Q.defer()
-              , service = this;
+            var service = this;
+            
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( userId )
+                    .success( function ( user ) {
 
-            UserModel
-                .find( userId )
-                .success( function ( user ) {
+                        if ( !user ) {
+                            resolve( { statuscode: 403, message: "User doesn't exist" } );
+                            return;
+                        }
 
-                    if ( !user ) {
-                        deferred.resolve( { statuscode: 403, message: 'User doesn\'t exist' } );
-                        return;
-                    }
+                        if ( user.confirmed ) {
+                            resolve( { statuscode: 403, message: user.email + ' , has already confirmed the account' } );
+                            return;
+                        }
 
-                    if ( user.confirmed ) {
-                        deferred.resolve( { statuscode: 403, message: user.email + ' , has already confirmed the account' } );
-                        return;
-                    }
+                        tplData.userFirstName = user.firstname;
+                        tplData.userEmail = user.email;
 
-                    tplData.userFirstName = user.firstname;
+                        service.generatePasswordResetHash( user, tplData )
+                            .then( service.mailPasswordRecoveryToken )
+                            .then( function () {
+                                resolve( { statuscode: 200, message: 'A confirmation link has been resent' } );
+                            })
+                            .catch( reject );
 
-                    tplData.userEmail = user.email;
+                    })
+                    .catch( resolve );
+            });
 
-                    service.generatePasswordResetHash( user, tplData )
-                        .then( service.mailPasswordRecoveryToken )
-                        .then( function () {
-                            deferred.resolve( { statuscode: 200, message: 'A confirmation link has been resent' } );
-                        } )
-                        .fail( deferred.reject );
-
-                } )
-                .error( deferred.resolve );
-
-            return deferred.promise;
         },
 
         handleUpdateUser: function ( userId, data ) {

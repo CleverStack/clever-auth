@@ -49,13 +49,17 @@ module.exports = function ( Model ) {
             default: false
         },
 
-        fullName: function() {
-            return [ this._model.values.firstname, this._model.values.lastname ].join( ' ' );
+        accessedAt: Date,
+
+        getters: {
+            fullName: function() {
+                return [ this.firstname, this.lastname ].join( ' ' );
+            }
         },
 
         toJSON: function() {
             var values = this._model.values;
-            values.fullName = this.fullName();
+            values.fullName = this.fullName;
             delete values.password;
             return values;
         }

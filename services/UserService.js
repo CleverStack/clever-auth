@@ -1,21 +1,15 @@
-var Q = require( 'q' )
-  , crypto = require( 'crypto' )
-  , moment = require( 'moment' )
-  , config = require( 'config' )
-  , moduleLoader = injector.getInstance( 'moduleLoader' )
-  , Promise = require( 'bluebird' )
-  , BaseService = require( 'services' ).BaseService
-  , EmailService = null
-  , UserService = null
-  , UserModel = null
-  , db = null;
+var crypto      = require( 'crypto' )
+  , Promise     = require( 'bluebird' )
+  , moment      = require( 'moment' )
+  , injector    = require( 'injector' )
+  , config      = require( 'config' )
+  , debug       = require( 'debug' )( 'cleverAuth' );
 
-module.exports = function ( UserModel ) {
-    if ( UserService && UserService.instance ) {
-        return UserService.instance;
-    }
+module.exports = function ( Service, UserModel ) {
+    var EmailService = null;
 
-    UserService = BaseService.extend( {
+    return Service.extend({
+        model: UserModel,
 
         //tested
         authenticate: function ( credentials ) {
@@ -27,29 +21,11 @@ module.exports = function ( UserModel ) {
                             if ( !!user.active ) {
                                 user.accessedAt = Date.now();
                                 user.save()
-                                    .then( function( user ) {
-                                        resolve( JSON.parse( JSON.stringify( user ) ) );
-                                    })
+                                    .then( resolve )
                                     .catch( reject );
                             } else {
                                 resolve( { statuscode: 403, message: "Login is not active for " + user.email + '.' }  );
                             }
-                        } else {
-                            resolve( { statuscode: 403, message: "User doesn't exist." }  );
-                        }
-                    })
-                    .catch( reject );
-            });
-        },
-
-        //tested
-        getUserFullDataJson: function ( id ) {
-            return new Promise( function( resolve, reject ) {
-                UserModel
-                    .find( id )
-                    .then( function( user ) {
-                        if ( !!user && !!user.id ) {
-                            resolve( JSON.parse( JSON.stringify( user ) ) );
                         } else {
                             resolve( { statuscode: 403, message: "User doesn't exist." }  );
                         }
@@ -149,15 +125,14 @@ module.exports = function ( UserModel ) {
         },
 
         //tested
-        createUser: function ( data, tplData ) {
-            var service = this
-              , usr;
+        create: function( data, tplData ) {
+            var _super = this._super
+              , that   = this;
 
             return new Promise( function( resolve, reject ) {
                 UserModel
                     .find( { email: data.email } )
                     .then( function( user ) {
-
                         if ( user !== null ) {
                             return resolve( { statuscode: 400, message: 'Email already exist' } );
                         }
@@ -168,12 +143,18 @@ module.exports = function ( UserModel ) {
                             console.error( err );
                         }
 
+                        // Prepare the data
+                        data.username = data.username || data.email;
+                        data.active = true;
+                        data.password = data.password
+                            ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
+                            : Math.random().toString( 36 ).slice( -14 );
+
                         if ( EmailService === null || !config[ 'clever-auth' ].email_confirmation ) {
 
                             data.confirmed = true;
 
-                            service
-                                .saveNewUser( data )
+                            _super.apply( that, [ data ] )
                                 .then( resolve )
                                 .catch( reject );
 
@@ -181,37 +162,17 @@ module.exports = function ( UserModel ) {
 
                             data.confirmed = false;
 
-                            service
-                                .saveNewUser( data )
+                            _super.apply( that, [ data ] )
                                 .then( function( user ) {
-                                    usr = user;
                                     return service.generatePasswordResetHash( user, tplData );
                                 })
                                 .then( service.mailPasswordRecoveryToken )
-                                .then( function() {
-                                    resolve( usr );
-                                } )
+                                .then( resolve )
                                 .catch( reject );
                         }
                     })
                     .catch( reject );
 
-            });
-        }, 
-
-        //tested
-        saveNewUser: function ( data ) {
-            return new Promise( function( resolve, reject ) {
-                data.username = data.username || data.email;
-                data.active = true;
-                data.password = data.password
-                    ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
-                    : Math.random().toString( 36 ).slice( -14 );
-
-                UserModel
-                    .create( data )
-                    .then( resolve )
-                    .catch( reject );
             });
         },
 
@@ -229,7 +190,7 @@ module.exports = function ( UserModel ) {
                         }
 
                         if ( user.confirmed ) {
-                            resolve( { statuscode: 403, message: user.email + ' , has already confirmed the account' } );
+                            resolve( { statuscode: 400, message: user.email + ' , has already confirmed the account' } );
                             return;
                         }
 
@@ -249,146 +210,14 @@ module.exports = function ( UserModel ) {
 
         },
 
-        handleUpdateUser: function ( userId, data ) {
-            var deferred = Q.defer();
-
-            UserModel
-                .find( { where: { id: userId } } )
-                .success( function ( user ) {
-
-                    if ( !user ) {
-                        deferred.resolve( { statuscode: 403, message: 'invalid id' } );
-                        return;
-                    }
-
-                    if ( data.password && data.new_password ) {
-
-                        if ( crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' ) !== user.password ) {
-                            deferred.resolve( {statuscode: 403, message: 'Invalid password'} );
-                            return;
-                        }
-
-                        data.hashedPassword = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
-                    }
-
-                    this
-                        .checkEmailAndUpdate( user, data )
-                        .then( deferred.resolve )
-                        .fail( deferred.reject );
-
-                }.bind( this ) )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        checkEmailAndUpdate: function ( user, data ) {
-            var deferred = Q.defer();
-
-            if ( data.email && ( user.email != data.email ) ) {
-
-                UserModel
-                    .find( { where: { email: data.email } } )
-                    .success( function ( chkUser ) {
-
-                        if ( chkUser ) {
-                            deferred.resolve( { statuscode: 400, message: "email already exists" } );
-                            return;
-                        }
-
-                        this
-                            .updateUser( user, data )
-                            .then( deferred.resolve )
-                            .fail( deferred.reject );
-
-                    }.bind( this ) )
-                    .error( deferred.reject );
-            } else {
-
-                this
-                    .updateUser( user, data )
-                    .then( deferred.resolve )
-                    .fail( deferred.reject );
+        update: function ( userId, data ) {
+            if ( data.new_password ) {
+                data.password = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
+                delete data.new_password;
             }
 
-            return deferred.promise;
-        }, //tested
+            return this._super( userId, data );
+        } //tested
 
-        updateUser: function ( user, data ) {
-            var deferred = Q.defer();
-
-            user.firstname = data.firstname || user.firstname;
-            user.lastname = data.lastname || user.lastname;
-            user.email = data.email || user.email;
-            user.phone = data.phone || user.phone;
-
-            if ( data.hashedPassword ) {
-                user.password = data.hashedPassword;
-            }
-
-            user.save()
-                .success( function ( user ) {
-
-                    this
-                        .getUserFullDataJson( { id: user.id } )
-                        .then( deferred.resolve )
-                        .fail( deferred.reject );
-
-                }.bind( this ) )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        listUsers: function() {
-            return new Promise( function( resolve, reject ) {
-                UserModel
-                    .findAll()
-                    .then( function( users ) {
-                        resolve( !users && !users.length 
-                            ? false
-                            : users.map( function( u ) { return u.toJSON(); } )
-                        );
-                    })
-                    .catch( reject );
-            });
-        }, //tested
-
-        deleteUser: function( userId ) {
-            var deferred = Q.defer();
-
-            UserModel
-                .find( userId )
-                .success( function( user ) {
-
-                    if ( !!user && !!user.id ) {
-
-                        user
-                            .destroy()
-                            .success( function( result ) {
-
-                                if ( !result.deletedAt ) {
-                                    deferred.resolve( { statuscode: 500, message: 'error' } );
-                                } else {
-                                    deferred.resolve( { statuscode: 200, message: 'user is deleted' } );
-                                }
-
-                            })
-                            .error( deferred.reject );
-
-                    } else {
-                        deferred.resolve( { statuscode: 403, message: 'user do not exist' } )
-                    }
-                })
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }
-
-    } );
-
-    UserService.instance = new UserService( UserModel._db );
-    UserService.Model = UserModel;
-
-    return UserService.instance;
+    });
 };

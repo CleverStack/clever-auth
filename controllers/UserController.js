@@ -82,16 +82,14 @@ module.exports = function ( Controller, passport, UserService ) {
             } //tested
         },
         {
-            listAction: function () {
-                UserService.listUsers()
-                    .then( this.proxy( 'handleServiceMessage' ) )
-                    .catch( this.proxy( 'handleException' ) );
-            }, //tested
-
             getAction: function () {
-                UserService.getUserFullDataJson( this.req.params.id )
-                    .then( this.proxy( 'handleServiceMessage' ) )
-                    .catch( this.proxy( 'handleException' ) );
+                if ( !!this.req.params.id ) {
+                    UserService.find( this.req.params.id )
+                        .then( this.proxy( 'handleServiceMessage' ) )
+                        .catch( this.proxy( 'handleException' ) );
+                } else {
+                    this.listAction();
+                }
             }, //tested
 
             postAction: function () {
@@ -113,47 +111,34 @@ module.exports = function ( Controller, passport, UserService ) {
                     subject: data.firstname || data.email + ' wants to add you to their recruiting team!'
                 };
 
-
                 UserService
-                    .createUser( data, tplData )
-                    .then( this.proxy( 'handleServiceMessage' ) )
+                    .create( data, tplData )
+                    .then( this.proxy( 'loginUserJson' ) )
                     .catch( this.proxy( 'handleException' ) );
             }, //tested without email confirmation
 
             putAction: function () {
-                var meId = this.req.user.id
-                  , userId = this.req.params.id
-                  , data = this.req.body;
-
-                if ( !userId ) {
-                    this.send( 'Bad Request', 400 );
-                    return;
-                }
-
                 UserService
-                    .handleUpdateUser( userId, data )
-                    .then( this.proxy( 'handleSessionUpdate', meId ) )
+                    .update( this.req.params.id, this.req.body )
+                    .then( this.proxy( 'handleSessionUpdate' ) )
                     .catch( this.proxy( 'handleException' ) );
-
             }, //tested
 
-            handleSessionUpdate: function ( meId, user ) {
-                if ( user.id && ( meId === user.id ) ) {
+            deleteAction: function( req, res ) {
+                UserService
+                    .destroy( this.req.params.id, this.req.body )
+                    .then( this.proxy( !!(this.req.params.id === this.req.user.id) ? 'logoutAction' : 'handleServiceMessage' ) )
+                    .catch( this.proxy( 'handleException' ) );
+            },
+
+            handleSessionUpdate: function ( user ) {
+                if ( user.id && ( this.req.user.id === user.id ) ) {
                     this.loginUserJson ( user );
                     return;
                 }
 
                 this.handleServiceMessage( user );
             }, //tested through putAction
-
-            deleteAction: function () {
-                var uId = this.req.params.id;
-
-                UserService.deleteUser( uId )
-                    .then( this.proxy( 'handleServiceMessage' ) )
-                    .catch( this.proxy( 'handleException' ) );
-
-            }, //tested
 
             loginAction: function () {
                 passport.authenticate( 'local', this.proxy( 'handleLocalUser' ) )( this.req, this.res, this.next );
@@ -189,7 +174,7 @@ module.exports = function ( Controller, passport, UserService ) {
                 }
 
                 UserService
-                    .getUserFullDataJson( { id: user.id } )
+                    .find( user.id )
                     .then( this.proxy( 'loginUserJson' ) )
                     .catch( this.proxy( 'handleException' ) );
 

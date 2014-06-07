@@ -1,55 +1,55 @@
-var passport = require( 'passport' )
-  , debug = require( 'debug' )( 'AuthModule' )
-  , fs = require( 'fs' )
-  , path = require( 'path' )
-  , ModuleClass = require( 'classes' ).ModuleClass
-  , RedisStore = require( 'connect-redis' )( injector.getInstance( 'express' ) )
-  , Module;
+var injector        = require( 'injector' )
+  , passport        = require( 'passport' )
+  , connectRedis    = require( 'connect-redis' )( injector.getInstance( 'express' ) )
+  , Module          = require( 'classes' ).Module;
 
-Module = ModuleClass.extend({
-    store: null,
+module.exports = new Module.extend({
+
+    sessionStore: null,
 
     preSetup: function () {
-        debug( 'Adding passport to the injector...' );
+        if ( !!this.config.redis ) {
+            var env = process.env.NODE_ENV ? process.env.NODE_ENV : 'local';
 
-        injector.instance( 'passport', passport );
+            this.config.redis.prefix = !!this.config.redis.prefix
+                ? this.config.redis.prefix + env + '_'
+                : env + '_';
+
+            this.debug( 'Configuring connect-redis for use as session storage: ' + JSON.stringify( this.config.redis ) );
+            this.sessionStore = new connectRedis( this.config.redis );
+        }
     },
 
     preInit: function() {
-        debug( 'Setup the redis store...' );
+        this.debug( 'Adding passport and sessionStore to the injector...' );
 
-        this.store = new RedisStore({
-            host: this.config.redis.host,
-            port: this.config.redis.port,
-            prefix: this.config.redis.prefix + process.env.NODE_ENV + "_",
-            password: this.config.redis.key
-        });
+        injector.instance( 'passport', passport );
+        injector.instance( 'sessionStore', this.sessionStore )
     },
 
-    configureApp: function ( app, express ) {
-        debug( 'Setting up session management...' );
-
-        // Bring in the cookie parser
+    configureApp: function( app, express ) {
+        this.debug( 'Configuring express to use the cookieParser...' );
         app.use( express.cookieParser() );
         
-        // Session management
+        this.debug( 'Configuring session management...' );
+
         app.use( 
-            express.session( {
+            express.session({
                 secret: this.config.secretKey,
                 cookie: { secure: false, maxAge: 86400000 },
-                store: this.store
+                store: this.sessionStore
             })
         );
 
-        // Initialize passport
+        this.debug( 'Configuring passport initialize middleware...' );
         app.use( passport.initialize() );
+
+        this.debug( 'Configuring passport session middleware..' );
         app.use( passport.session() );
     },
 
     preShutdown: function () {
-        debug( 'Closing connection to redis store...' );
-        this.store.client.quit();
+        this.debug( 'Closing session store connection...' );
+        this.sessionStore.client.quit();
     }
 });
-
-module.exports = new Module( 'clever-auth', injector );

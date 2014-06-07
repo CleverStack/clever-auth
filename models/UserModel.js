@@ -1,5 +1,5 @@
 module.exports = function ( Model ) {
-    return Model.extend( 'User', {
+    return Model.extend( 'User', { type: 'ORM', softDeletable: true }, {
         id: {
             type: Number,
             primaryKey: true,
@@ -48,20 +48,14 @@ module.exports = function ( Model ) {
             type: Boolean,
             default: false
         },
-
         accessedAt: Date,
 
         getters: {
             fullName: function() {
-                return [ this.firstname, this.lastname ].join( ' ' );
+                return !!this.firstname && !!this.lastname
+                    ? [ this.firstname, this.lastname ].join( ' ' )
+                    : '';
             }
-        },
-
-        toJSON: function() {
-            var values = this._model.values;
-            values.fullName = this.fullName;
-            delete values.password;
-            return values;
         }
     });
 };

@@ -1,6 +1,6 @@
 {
   "name": "clever-auth",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "dependencies": {
     "passport": "^0.2.0",
     "passport-facebook": "~1.0.2",
@@ -19,7 +19,7 @@
     "web": "http://cleverstack.io"
   },
   "collaborators": [
-    "Richard Gustin <richard@clevertech.biz>"
+    "Richard Gustin <richard.gustin86@gmail.com>"
   ],
   "description": "Clevertech Authentication Module",
   "keywords": [

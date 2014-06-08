@@ -1,114 +1,57 @@
-var passport = require( 'passport' )
-  , debug = require( 'debug' )( 'AuthModule' )
-  , fs = require( 'fs' )
-  , path = require( 'path' )
-  , ModuleClass = require( 'classes' ).ModuleClass
-  , RedisStore = require( 'connect-redis' )( injector.getInstance( 'express' ) )
-  , Module;
+var injector     = require( 'injector' )
+  , passport     = require( 'passport' )
+  , connectRedis = require( 'connect-redis' )( injector.getInstance( 'express' ) )
+  , Module       = require( 'classes' ).Module;
 
-Module = ModuleClass.extend( {
-    models: null,
-    store: null,
-    sequelize: null,
+module.exports = Module.extend({
 
-    preSetup: function() {
-        var self = this;
-        this.models = {};
-        this.sequelize = injector.getInstance( 'sequelize' );
-        var dir = fs.readdirSync( path.join( __dirname, 'models', 'orm' ) );
-        dir.forEach( function ( model ) {
-            self.getModel( path.join( __dirname, 'models', 'orm', model ) );
-        } );
+    sessionStore: null,
+
+    preSetup: function () {
+        if ( !!this.config.redis ) {
+            var env = process.env.NODE_ENV ? process.env.NODE_ENV : 'local';
+
+            this.config.redis.prefix = !!this.config.redis.prefix
+                ? this.config.redis.prefix + env + '_'
+                : env + '_';
+
+            this.debug( 'Configuring connect-redis for use as session storage: ' + JSON.stringify( this.config.redis ) );
+            this.sessionStore = new connectRedis( this.config.redis );
+        }
     },
 
-    preResources: function () {
+    preInit: function() {
+        this.debug( 'Adding passport and sessionStore to the injector...' );
+
         injector.instance( 'passport', passport );
+        injector.instance( 'sessionStore', this.sessionStore )
     },
 
-    modulesLoaded: function() {
-        this.defineModelsAssociations();
-    },
-
-    defineModelsAssociations: function() {
-        if (!this.config.hasOwnProperty( 'modelAssociations' )) {
-            return true;
-        }
-
-        debug( 'Defining model assocations' );
-
-        Object.keys( this.config.modelAssociations ).forEach( this.proxy( function( modelName ) {
-            Object.keys( this.config.modelAssociations[ modelName ] ).forEach( this.proxy( 'defineModelAssociations', modelName ) );
-        }));
-    },
-
-    defineModelAssociations: function( modelName, assocType ) {
-        var associatedWith = this.config.modelAssociations[ modelName ][ assocType ];
-        if ( ! associatedWith instanceof Array ) {
-            associatedWith = [ associatedWith ];
-        }
-
-        associatedWith.forEach( this.proxy( 'associateModels', modelName, assocType ) );
-    },
-
-    associateModels: function( modelName, assocType, assocTo ) {
-        // Support second argument
-        if ( assocTo instanceof Array ) {
-            debug( '%s %s %s with second argument of ', modelName, assocType, assocTo[0], assocTo[1] );
-            this.models[ modelName ][ assocType ]( this.models[ assocTo[0] ], assocTo[1] );
-        } else {
-            debug( '%s %s %s', modelName, assocType, assocTo );
-            this.models[ modelName ][ assocType ]( this.models[assocTo] );
-        }
-    },
-
-    getModel: function( modelPath ) {
-        var modelName = modelPath.split( '/' ).pop().split( '.' ).shift();
-
-        if ( typeof this.models[ modelName ] === 'undefined' ) {
-            debug( [ 'Loading model', modelName, 'from', modelPath ].join( ' ' ) );
-
-            // Call on sequelizejs to load the model
-            this.models[ modelName ] = this.sequelize.import( modelPath );
-
-            // Set a flat for tracking
-            this.models[ modelName ].ORM = true;
-
-            // Add the model to the injector
-            injector.instance( 'ORM' + modelName, this.models[ modelName ] );
-        }
-
-        return this.models[ modelName ];
-    },
-
-    configureApp: function ( app, express ) {
-        // Setup the redis store
-        this.store = new RedisStore( {
-            host: this.config.redis.host,
-            port: this.config.redis.port,
-            prefix: this.config.redis.prefix + process.env.NODE_ENV + "_",
-            password: this.config.redis.key
-        } );
-
-        // Bring in the cookie parser
+    configureApp: function( app, express ) {
+        this.debug( 'Configuring express to use the cookieParser...' );
         app.use( express.cookieParser() );
         
-        // Session management
+        this.debug( 'Configuring session management...' );
+
         app.use( 
-            express.session( {
+            express.session({
                 secret: this.config.secretKey,
                 cookie: { secure: false, maxAge: 86400000 },
-                store: this.store
+                store: this.sessionStore
             })
         );
 
-        // Initialize passport
+        this.debug( 'Configuring passport initialize middleware...' );
         app.use( passport.initialize() );
+
+        this.debug( 'Configuring passport session middleware..' );
         app.use( passport.session() );
+
+        this.emit( 'appReady' );
     },
 
     preShutdown: function () {
-        this.store.client.quit();
+        this.debug( 'Closing session store connection...' );
+        this.sessionStore.client.quit();
     }
-} );
-
-module.exports = new Module( 'clever-auth', injector );
+});

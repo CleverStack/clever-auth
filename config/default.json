@@ -11,6 +11,8 @@
 
         "hostUrl": "http://localhost:",
 
-        "email_confirmation": false
+        "email_confirmation": false,
+
+        "driver": "ORM"
     }
 }

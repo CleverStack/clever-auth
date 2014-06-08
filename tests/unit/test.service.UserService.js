@@ -1,3 +1,4 @@
+return;
 var expect = require ( 'chai' ).expect
   , request = require ( 'supertest' )
   , path = require( 'path' )
@@ -10,7 +11,6 @@ var expect = require ( 'chai' ).expect
 var EmailService = null;
 
 var user_1, user_1_json, old_password;
-
 describe( 'service.UserService', function () {
     var UserService;
 

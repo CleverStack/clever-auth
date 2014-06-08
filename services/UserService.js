@@ -1,102 +1,69 @@
-var Q = require( 'q' )
-  , crypto = require( 'crypto' )
-  , moment = require( 'moment' )
-  , Sequelize = require( 'sequelize' )
-  , config = require( 'config' )
-  , UserService = null;
+var crypto      = require( 'crypto' )
+  , Promise     = require( 'bluebird' )
+  , moment      = require( 'moment' )
+  , injector    = require( 'injector' )
+  , config      = require( 'config' )
+  , debug       = require( 'debug' )( 'cleverAuth' );
 
-module.exports = function ( sequelize,
-                            ORMUserModel ) {
-
-    if ( UserService && UserService.instance ) {
-        return UserService.instance;
-    }
-
+module.exports = function ( Service, UserModel ) {
     var EmailService = null;
 
-    UserService = require( 'services' ).BaseService.extend( {
+    return Service.extend({
+        model: UserModel,
 
+        //tested
         authenticate: function ( credentials ) {
-            var deferred = Q.defer()
-              , service = this
-              , chainer = new Sequelize.Utils.QueryChainer();
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( credentials )
+                    .then( function( user ) {
+                        if ( !!user && !!user.id ) {
+                            if ( !!user.active ) {
+                                user.accessedAt = Date.now();
+                                user.save()
+                                    .then( resolve )
+                                    .catch( reject );
+                            } else {
+                                resolve( { statuscode: 403, message: "Login is not active for " + user.email + '.' }  );
+                            }
+                        } else {
+                            resolve( { statuscode: 403, message: "User doesn't exist." }  );
+                        }
+                    })
+                    .catch( reject );
+            });
+        },
 
-            ORMUserModel
-                .find( { where: credentials } )
-                .success( function ( user ) {
-
-                    if ( !user || !user.active ) {
-                        return deferred.resolve();
-                    }
-
-                    chainer.add( user.updateAttributes( { accessedAt: moment.utc().format( 'YYYY-MM-DD HH:ss:mm' )  } ) );
-
-                    chainer
-                        .runSerially()
-                        .success( function ( result ) {
-
-                            var userJson = ( result[0] ) ? JSON.parse( JSON.stringify( result[0] ) ) : {};
-
-                            deferred.resolve( userJson );
-                        } )
-                        .error( deferred.reject );
-                } )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        getUserFullDataJson: function ( options ) {
-            var deferred = Q.defer()
-              , service = this;
-
-            ORMUserModel
-                .find( { where: options } )
-                .success( function ( user ) {
-
-                    if ( !user ) {
-                        return deferred.resolve( {} );
-                    }
-
-                    var userJson = JSON.parse( JSON.stringify( user ) );
-
-                    deferred.resolve( userJson );
-                } )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
+        //tested
         generatePasswordResetHash: function ( user, tplData ) {
-            var deferred = Q.defer()
-              , md5 = null
-              , hash = null
-              , expTime = null
-              , actionpath = ( !user.confirmed ) ? 'user/confirm' : 'password_reset_submit'
-              , mailsubject = ( !user.confirmed ) ? 'User Confirmation' : 'Password Recovery';
+            return new Promise( function( resolve, reject ) {
+                var md5 = null
+                  , hash = null
+                  , expTime = null
+                  , actionpath = ( !user.confirmed ) ? 'user/confirm' : 'password_reset_submit'
+                  , mailsubject = ( !user.confirmed ) ? 'User Confirmation' : 'Password Recovery';
 
-            if ( !user || !user.createdAt || !user.updatedAt || !user.password || !user.email ) {
-                deferred.resolve( { statuscode: 403, message: 'Unauthorized' } );
-            } else {
+                if ( !user || !user.createdAt || !user.updatedAt || !user.password || !user.email ) {
+                    resolve( { statuscode: 403, message: 'Unauthorized' } );
+                } else {
+                    md5 = crypto.createHash( 'md5' );
+                    md5.update( user.createdAt + user.updatedAt + user.password + user.email + 'recover', 'utf8' );
+                    hash = md5.digest( 'hex' );
+                    expTime = moment.utc().add( 'hours', 8 ).valueOf();
 
-                md5 = crypto.createHash( 'md5' );
-                md5.update( user.createdAt + user.updatedAt + user.password + user.email + 'recover', 'utf8' );
-                hash = md5.digest( 'hex' );
+                    resolve({
+                        hash: hash,
+                        expTime: expTime,
+                        user: user,
+                        action: actionpath,
+                        mailsubject: mailsubject,
+                        tplData: tplData || null
+                    });
+                }
+            });
+        },
 
-                expTime = moment.utc().add( 'hours', 8 ).valueOf();
-
-                deferred.resolve( {
-                    hash: hash,
-                    expTime: expTime,
-                    user: user,
-                    action: actionpath,
-                    mailsubject: mailsubject,
-                    tplData: tplData || null
-                } );
-            }
-            return deferred.promise;
-        }, //tested
-
+        // @todo this needs allot of work to get it working as expected
         mailPasswordRecoveryToken: function ( obj ) {
 
 //            var hosturl = !!config.hosturl
@@ -157,255 +124,100 @@ module.exports = function ( sequelize,
                 } );
         },
 
-        createUser: function ( data, tplData ) {
-            var deferred = Q.defer()
-              , service = this
-              , usr;
+        //tested
+        create: function( data, tplData ) {
+            var _super = this._super
+              , that   = this;
 
-            ORMUserModel
-                .find( { where: { email: data.email } } )
-                .success( function ( user ) {
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( { email: data.email } )
+                    .then( function( user ) {
+                        if ( user !== null ) {
+                            return resolve( { statuscode: 400, message: 'Email already exist' } );
+                        }
 
-                    if ( user !== null ) {
-                        deferred.resolve( { statuscode: 400, message: 'Email already exist' } );
-                        return;
-                    }
+                        try {
+                            EmailService = require( 'services' )[ 'EmailService' ];
+                        } catch ( err ) {
+                            console.error( err );
+                        }
 
-                    try {
-                        EmailService = require( 'services' )['EmailService'];
-                    } catch ( err ) {
-                        console.log( err );
-                    }
+                        // Prepare the data
+                        data.username = data.username || data.email;
+                        data.active = true;
+                        data.password = data.password
+                            ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
+                            : Math.random().toString( 36 ).slice( -14 );
 
-                    if ( EmailService === null || !config['clever-auth'].email_confirmation ) {
+                        if ( EmailService === null || !config[ 'clever-auth' ].email_confirmation ) {
 
-                        data.confirmed = true;
+                            data.confirmed = true;
 
-                        service
-                            .saveNewUser( data )
-                            .then( deferred.resolve )
-                            .fail( deferred.reject );
+                            _super.apply( that, [ data ] )
+                                .then( resolve )
+                                .catch( reject );
 
-                    } else {
+                        } else {
 
-                        data.confirmed = false;
+                            data.confirmed = false;
 
-                        service
-                            .saveNewUser( data )
-                            .then( function ( user ) {
-                                usr = user;
-                                return service.generatePasswordResetHash( user, tplData );
-                            } )
-                            .then( service.mailPasswordRecoveryToken )
-                            .then( function () {
-                                deferred.resolve( usr );
-                            } )
-                            .fail( function ( err ) {
-                                console.log( err );
-                                deferred.reject();
-                            } );
-                    }
-                } )
-                .error( deferred.reject );
+                            _super.apply( that, [ data ] )
+                                .then( function( user ) {
+                                    return service.generatePasswordResetHash( user, tplData );
+                                })
+                                .then( service.mailPasswordRecoveryToken )
+                                .then( resolve )
+                                .catch( reject );
+                        }
+                    })
+                    .catch( reject );
 
-            return deferred.promise;
-        }, //tested
-
-        saveNewUser: function ( data ) {
-            var deferred = Q.defer();
-
-            data.username = data.username || data.email;
-            data.active = true;
-            data.password = data.password
-                ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
-                : Math.random().toString( 36 ).slice( -14 );
-
-            ORMUserModel
-                .create( data )
-                .success( deferred.resolve )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        resendAccountConfirmation: function ( userId, tplData ) {
-            var deferred = Q.defer()
-              , service = this;
-
-            ORMUserModel
-                .find( userId )
-                .success( function ( user ) {
-
-                    if ( !user ) {
-                        deferred.resolve( { statuscode: 403, message: 'User doesn\'t exist' } );
-                        return;
-                    }
-
-                    if ( user.confirmed ) {
-                        deferred.resolve( { statuscode: 403, message: user.email + ' , has already confirmed the account' } );
-                        return;
-                    }
-
-                    tplData.userFirstName = user.firstname;
-
-                    tplData.userEmail = user.email;
-
-                    service.generatePasswordResetHash( user, tplData )
-                        .then( service.mailPasswordRecoveryToken )
-                        .then( function () {
-                            deferred.resolve( { statuscode: 200, message: 'A confirmation link has been resent' } );
-                        } )
-                        .fail( deferred.reject );
-
-                } )
-                .error( deferred.resolve );
-
-            return deferred.promise;
+            });
         },
 
-        handleUpdateUser: function ( userId, data ) {
-            var deferred = Q.defer();
+        resendAccountConfirmation: function ( userId, tplData ) {
+            var service = this;
+            
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( userId )
+                    .success( function ( user ) {
 
-            ORMUserModel
-                .find( { where: { id: userId } } )
-                .success( function ( user ) {
-
-                    if ( !user ) {
-                        deferred.resolve( { statuscode: 403, message: 'invalid id' } );
-                        return;
-                    }
-
-                    if ( data.password && data.new_password ) {
-
-                        if ( crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' ) !== user.password ) {
-                            deferred.resolve( {statuscode: 403, message: 'Invalid password'} );
+                        if ( !user ) {
+                            resolve( { statuscode: 403, message: "User doesn't exist" } );
                             return;
                         }
 
-                        data.hashedPassword = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
-                    }
-
-                    this
-                        .checkEmailAndUpdate( user, data )
-                        .then( deferred.resolve )
-                        .fail( deferred.reject );
-
-                }.bind( this ) )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        checkEmailAndUpdate: function ( user, data ) {
-            var deferred = Q.defer();
-
-            if ( data.email && ( user.email != data.email ) ) {
-
-                ORMUserModel
-                    .find( { where: { email: data.email } } )
-                    .success( function ( chkUser ) {
-
-                        if ( chkUser ) {
-                            deferred.resolve( { statuscode: 400, message: "email already exists" } );
+                        if ( user.confirmed ) {
+                            resolve( { statuscode: 400, message: user.email + ' , has already confirmed the account' } );
                             return;
                         }
 
-                        this
-                            .updateUser( user, data )
-                            .then( deferred.resolve )
-                            .fail( deferred.reject );
+                        tplData.userFirstName = user.firstname;
+                        tplData.userEmail = user.email;
 
-                    }.bind( this ) )
-                    .error( deferred.reject );
-            } else {
-
-                this
-                    .updateUser( user, data )
-                    .then( deferred.resolve )
-                    .fail( deferred.reject );
-            }
-
-            return deferred.promise;
-        }, //tested
-
-        updateUser: function ( user, data ) {
-            var deferred = Q.defer();
-
-            user.firstname = data.firstname || user.firstname;
-            user.lastname = data.lastname || user.lastname;
-            user.email = data.email || user.email;
-            user.phone = data.phone || user.phone;
-
-            if ( data.hashedPassword ) {
-                user.password = data.hashedPassword;
-            }
-
-            user.save()
-                .success( function ( user ) {
-
-                    this
-                        .getUserFullDataJson( { id: user.id } )
-                        .then( deferred.resolve )
-                        .fail( deferred.reject );
-
-                }.bind( this ) )
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        listUsers: function() {
-            var deferred = Q.defer();
-
-            ORMUserModel
-                .findAll( { where: { deletedAt: null } } )
-                .success( function( users ) {
-                    if ( !!users && !!users.length ) {
-                        deferred.resolve( users.map( function( u ) { return u.toJSON(); } ) );
-                    } else {
-                        deferred.resolve( {} );
-                    }
-                })
-                .error( deferred.reject );
-
-            return deferred.promise;
-        }, //tested
-
-        deleteUser: function( userId ) {
-            var deferred = Q.defer();
-
-            ORMUserModel
-                .find( userId )
-                .success( function( user ) {
-
-                    if ( !!user && !!user.id ) {
-
-                        user
-                            .destroy()
-                            .success( function( result ) {
-
-                                if ( !result.deletedAt ) {
-                                    deferred.resolve( { statuscode: 500, message: 'error' } );
-                                } else {
-                                    deferred.resolve( { statuscode: 200, message: 'user is deleted' } );
-                                }
-
+                        service.generatePasswordResetHash( user, tplData )
+                            .then( service.mailPasswordRecoveryToken )
+                            .then( function () {
+                                resolve( { statuscode: 200, message: 'A confirmation link has been resent' } );
                             })
-                            .error( deferred.reject );
+                            .catch( reject );
 
-                    } else {
-                        deferred.resolve( { statuscode: 403, message: 'user do not exist' } )
-                    }
-                })
-                .error( deferred.reject );
+                    })
+                    .catch( resolve );
+            });
 
-            return deferred.promise;
-        }
+        },
 
-    } );
+        update: function ( userId, data ) {
+            if ( data.new_password ) {
+                data.password = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
+                delete data.new_password;
+            }
 
-    UserService.instance = new UserService( sequelize );
-    UserService.Model = ORMUserModel;
+            return this._super( userId, data );
+        } //tested
 
-    return UserService.instance;
+    });
 };

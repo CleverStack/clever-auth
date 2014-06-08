@@ -1,9 +1,9 @@
-var injector        = require( 'injector' )
-  , passport        = require( 'passport' )
-  , connectRedis    = require( 'connect-redis' )( injector.getInstance( 'express' ) )
-  , Module          = require( 'classes' ).Module;
+var injector     = require( 'injector' )
+  , passport     = require( 'passport' )
+  , connectRedis = require( 'connect-redis' )( injector.getInstance( 'express' ) )
+  , Module       = require( 'classes' ).Module;
 
-module.exports = new Module.extend({
+module.exports = Module.extend({
 
     sessionStore: null,
 
@@ -46,6 +46,8 @@ module.exports = new Module.extend({
 
         this.debug( 'Configuring passport session middleware..' );
         app.use( passport.session() );
+
+        this.emit( 'appReady' );
     },
 
     preShutdown: function () {

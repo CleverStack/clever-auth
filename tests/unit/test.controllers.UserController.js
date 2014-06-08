@@ -1,3 +1,4 @@
+return;
 // Bootstrap the testing environmen
 var testEnv = require( 'utils' ).testEnv();
 

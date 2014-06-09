@@ -11,8 +11,7 @@
         "after": false,
         "waits": false,
         "waitsFor": false,
-        "runs": false,
-        "injector": false
+        "runs": false
     },
     "node": true,
     "camelcase": false,

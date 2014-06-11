@@ -1,5 +1,12 @@
-module.exports = function ( Model ) {
-    return Model.extend( 'User', { type: 'ORM', softDeletable: true }, {
+module.exports = function ( Model, config ) {
+    console.log(config['clever-auth'].driver)
+    return Model.extend( 'User',
+    {
+        type: config['clever-auth'].driver,
+        softDeletable: true,
+        timeStampable: true
+    },
+    {
         id: {
             type: Number,
             primaryKey: true,
@@ -52,9 +59,7 @@ module.exports = function ( Model ) {
 
         getters: {
             fullName: function() {
-                return !!this.firstname && !!this.lastname
-                    ? [ this.firstname, this.lastname ].join( ' ' )
-                    : '';
+                return !!this.firstname && !!this.lastname ? [ this.firstname, this.lastname ].join( ' ' ) : '';
             }
         }
     });

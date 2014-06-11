@@ -1,5 +1,7 @@
 {
     "clever-auth": {
+        "driver": "ORM",
+
         "secretKey": "youMustChangeMe",
 
         "redis": {
@@ -11,8 +13,6 @@
 
         "hostUrl": "http://localhost:",
 
-        "email_confirmation": false,
-
-        "driver": "ORM"
+        "email_confirmation": false
     }
 }

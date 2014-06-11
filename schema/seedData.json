@@ -1,12 +1,12 @@
 {
   "UserModel": [
     {
-      "username": "richard",
-      "password": "d92dda534ba0200d6ff2bfa2422827b9cea59932",
-      "email": "richard.gustin86@gmail.com",
-      "firstname": "Richard",
-      "lastname": "Gustin",
-      "phone": "0448048484",
+      "username": "test",
+      "password": "a31a61e94f3799a9385dab9966c4c22c9f5790c4",
+      "email": "test@cleverstack.io",
+      "firstname": "Clever",
+      "lastname": "Admin",
+      "phone": "",
       "active": true,
       "confirmed": true,
       "hasAdminRight": true

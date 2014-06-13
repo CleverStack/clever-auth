@@ -1,5 +1,4 @@
 module.exports = function ( Model, config ) {
-    console.log(config['clever-auth'].driver)
     return Model.extend( 'User',
     {
         type: config['clever-auth'].driver,

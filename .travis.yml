@@ -9,6 +9,7 @@ before_install:
   - npm install -g cleverstack-cli
   - npm install ncp
   - npm install bluebird
+  - npm install rimraf
 
 before_script:
   - mysql -e 'create database test_db;'

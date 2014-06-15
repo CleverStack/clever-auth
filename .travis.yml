@@ -8,7 +8,7 @@ before_install:
   - npm install -g bower
   - npm install -g cleverstack-cli
   - npm install ncp
-  - npm install q
+  - npm install bluebird
 
 before_script:
   - mysql -e 'create database test_db;'

@@ -140,41 +140,40 @@ function copyAuthModule () {
 }
 
 function bundled() {
-    var deferred = Q.defer()
-      , file = path.join( __dirname, '../', prName, 'backend', 'package.json' );
+    return new Promise( function( resolve, reject ) {
+        var file = path.join( __dirname, '../', prName, 'backend', 'package.json' );
 
-    console.log( 'step #3 - added clever-auth module in bundledDependencies\n' );
+        console.log( 'step #3 - added clever-auth module in bundledDependencies\n' );
 
-    fs.readFile ( file, function ( err, data ) {
-
-        if ( err ) {
-            console.log( 'Error in step #3 - ' + err + '\n');
-            return deferred.reject ( err );
-        }
-
-        data = JSON.parse ( data );
-
-        data.bundledDependencies.push ( 'clever-auth' );
-
-        fs.writeFile ( file, JSON.stringify ( data ), function ( err ) {
+        fs.readFile ( file, function ( err, data ) {
 
             if ( err ) {
                 console.log( 'Error in step #3 - ' + err + '\n');
-                return deferred.reject ( err );
+                return reject ( err );
             }
 
-            console.log('step #3 process exited with code 0\n' );
-            deferred.resolve();
+            data = JSON.parse ( data );
+
+            data.bundledDependencies.push ( 'clever-auth' );
+
+            fs.writeFile ( file, JSON.stringify ( data ), function ( err ) {
+
+                if ( err ) {
+                    console.log( 'Error in step #3 - ' + err + '\n');
+                    return reject ( err );
+                }
+
+                console.log('step #3 process exited with code 0\n' );
+                resolve();
+            });
         });
     });
-
-    return deferred.promise;    
 }
 
 createProject (  )    
     .then ( copyAuthModule )
     .then ( bundled )
     .then ( installORM )
-    .fail ( function (err) {
+    .catch ( function (err) {
         console.log('Error - ' + err );
     });

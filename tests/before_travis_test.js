@@ -77,9 +77,9 @@ function installORM() {
 function copyAuthModule () {
     return new Promise( function( resolve, reject ) {
         var fromDir = path.join( __dirname, '../' )
-          , toDir   = path.join( __dirname, '../', prName, 'backend', 'modules', 'clever-auth' );
+          , toDir   = path.join( __dirname, '../', prName, 'modules', 'clever-auth' );
 
-        console.log( 'step #2 - copy clever-auth modyle in test project - begin\n' );
+        console.log( 'step #2 - copy clever-auth module in test project - begin\n' );
 
         function copyDir ( from, to ) {
             var files = fs.readdirSync( from );
@@ -141,7 +141,7 @@ function copyAuthModule () {
 
 function bundled() {
     return new Promise( function( resolve, reject ) {
-        var file = path.join( __dirname, '../', prName, 'backend', 'package.json' );
+        var file = path.join( __dirname, '../', prName, 'package.json' );
 
         console.log( 'step #3 - added clever-auth module in bundledDependencies\n' );
 

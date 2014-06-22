@@ -1,8 +1,10 @@
 {
     "clever-auth": {
-        "driver": "ORM",
-
         "secretKey": "youMustChangeMe",
+        
+        "driver": "ORM",
+        
+        "sessionStorageDriver": "redis",
 
         "redis": {
             "host": "localhost",
@@ -11,7 +13,13 @@
             "key": ""
         },
 
-        "hostUrl": "http://localhost:",
+        "memcache": {
+            "host": "localhost",
+            "port": "6379",
+            "prefix": ""
+        },
+
+        "hostUrl": "http://localhost:8080",
 
         "email_confirmation": false
     }

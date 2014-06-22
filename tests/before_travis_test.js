@@ -268,13 +268,9 @@ function seedDataForAuthModule() {
 
 function rebaseDb() {
     return new Promise( function( resolve, reject ) {
-        var proc = spawn ( 'grunt', [ 'db'], { cwd: path.join( __dirname, '../', prName ) } );
+        var proc = spawn( 'grunt', [ 'db' ], { stdio: 'inherit', cwd: path.join( __dirname, '../', prName ) } );
 
-        console.log( 'step #8 - grunt db - begin\n' );
-
-        proc.stdout.on('data', function (data) {
-            console.log( data.toString() );
-        });
+        console.log( 'step #8 - rebase db' );
 
         proc.stderr.on('data', function (data) {
             console.log( 'Error in step #8 - ' + data.toString() + '\n');
@@ -283,6 +279,7 @@ function rebaseDb() {
 
         proc.on('close', function (code) {
             console.log('step #8 process exited with code ' + code + '\n' );
+            console.log( require( 'config' ) );
             resolve();
         });
     });

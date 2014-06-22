@@ -1,15 +1,3 @@
 {
-  "UserModel": [
-    {
-      "username": "test",
-      "password": "a31a61e94f3799a9385dab9966c4c22c9f5790c4",
-      "email": "test@cleverstack.io",
-      "firstname": "Clever",
-      "lastname": "Admin",
-      "phone": "",
-      "active": true,
-      "confirmed": true,
-      "hasAdminRight": true
-    }
-  ]
+  "UserModel": []
 }

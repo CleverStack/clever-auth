@@ -105,7 +105,7 @@ function copyAuthModule () {
                         copyFile ( path.join( from, file ), path.join( to, file ) );
                     }
 
-                    if ( stats && stats.isDirectory() && file != prName ) {
+                    if ( stats && stats.isDirectory() && file != prName && file != 'node_modules' ) {
                         ncp( path.join( from, file ), path.join( to, file ), function ( err ) {
                             if (err) {
                                 console.log( 'Error in step #2 - ' + err + '\n');

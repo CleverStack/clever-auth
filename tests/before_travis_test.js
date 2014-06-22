@@ -273,6 +273,10 @@ function rebaseDb() {
 
         console.log( 'step #8 - rebase db' );
 
+        proc.stdout.on('data', function( data ) {
+            console.log( data.toString() );
+        });
+
         proc.stderr.on('data', function( data ) {
             console.log( 'Error in step #8 - ' + data.toString() + '\n' );
             reject( data.toString() );

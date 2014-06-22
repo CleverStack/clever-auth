@@ -74,6 +74,13 @@ You can use this module with either the clever-orm (ORM) or clever-odm (ODM) mod
 5. Run `grunt db` to rebase and seed the data.
 6. Run `grunt server` to start your application.
 
+## Rebuilding (rebasing) and Seeding your database
+1. `grunt db:rebaseOrm` will rebase your ORM database (delete and completely replace all tables)
+2. `grunt db:seedOrm` will seed data into your ORM database
+3. `grunt db:orm` will perform both of the above tasks
+
+Note: You can just run `grunt db`, `grunt db:rebase` and `grunt db:seed` but if the ODM module is installed it will perform these operations on that DB as well (which might be exactly what your looking for)
+
 ## Test Account Credentials
 
 username: `test@cleverstack.io` <br>

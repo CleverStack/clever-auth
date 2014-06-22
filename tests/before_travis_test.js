@@ -279,7 +279,8 @@ function rebaseDb() {
 
         proc.on('close', function (code) {
             console.log('step #8 process exited with code ' + code + '\n' );
-            console.log( require( 'config' ) );
+            console.dir( require( 'config' ) );
+            console.dir( require( path.resolve( path.join( __dirname, '..', 'package.json' ) ) ) );
             resolve();
         });
     });

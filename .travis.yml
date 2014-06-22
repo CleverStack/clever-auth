@@ -15,7 +15,7 @@ before_script:
   - mysql -e 'create database test_db;'
   - export NODE_ENV=test
   - export NODE_PATH=./lib/:./modules/
-  - export DEBUG=ModuleLoader,Modules,cleverOrm,cleverAuth
+  - export DEBUG=ModuleLoader,Modules,Models,Services,cleverOrm,cleverAuth
   - node tests/before_travis_test.js
   - cd testProject
 

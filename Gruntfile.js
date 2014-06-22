@@ -6,50 +6,24 @@ var fs      = require( 'fs' )
   , _       = require( 'underscore' );
 
 module.exports = function( grunt ) {
+    var defaultConfig   = require( path.join( __dirname, 'config', 'default.json' ) )
+      , configFile      = null
+      , config          = {}
+      , authSeedFile    = path.join( process.cwd(), 'modules', 'clever-auth', 'schema', 'seedData.json' )
+      , seedFile        = path.join( process.cwd(), 'schema', 'seedData.json' )
+      , seed            = {}
+      , foundUser       = false;
+
+    if ( fs.existsSync( seedFile ) ) {
+        seed = require( seedFile );
+    }
+
+    if ( fs.existsSync( authSeedFile ) ) {
+        _.extend( seed, require( authSeedFile ) );
+    }
+
     return [{
         prompt: {
-            cleverAuthSeedDataPrompt: {
-                options: {
-                    questions: [
-                        {
-                            config: 'cleverauth.username',
-                            type: 'input',
-                            message: 'Admin Username',
-                            default: 'admin',
-                        },
-                        {
-                            config: 'cleverauth.password',
-                            type: 'password',
-                            message: 'Admin Users Password',
-                            default: 'password'
-                        },
-                        {
-                            config: 'cleverauth.email',
-                            type: 'input',
-                            message: 'Admin Users Email',
-                            default: 'default@email.com'
-                        },
-                        {
-                            config: 'cleverauth.firstname',
-                            type: 'input',
-                            message: 'Admin Users Firstname',
-                            default: 'Admin',
-                        },
-                        {
-                            config: 'cleverauth.lastname',
-                            type: 'input',
-                            message: 'Admin Users Lastname',
-                            default: 'User',
-                        },
-                        {
-                            config: 'cleverauth.phone',
-                            type: 'input',
-                            message: 'Admin Users Phone Number',
-                            default: ''
-                        }
-                    ]
-                }
-            },
             cleverAuthConfigPrompt: {
                 options: {
                     questions: [
@@ -65,6 +39,23 @@ module.exports = function( grunt ) {
                             ],
                             default: function() {
                                 return process.env.NODE_ENV || 'LOCAL';
+                            },
+                            filter: function( env ) {
+                                _.extend( config, defaultConfig );
+
+                                configFile = path.resolve( path.join( __dirname, '..', '..', 'config', env + '.json' ) );
+
+                                if ( fs.existsSync( configFile ) ) {
+                                    _.extend( config, require( configFile ) );
+                                    
+                                    Object.keys( defaultConfig[ 'clever-auth' ] ).forEach( function( key ) {
+                                        if ( typeof config[ 'clever-auth' ][ key ] === 'undefined' ) {
+                                            config[ 'clever-auth' ][ key ] = defaultConfig[ 'clever-auth' ][ key ];
+                                        }
+                                    });
+                                }
+
+                                return true;
                             }
                         },
                         {
@@ -72,14 +63,17 @@ module.exports = function( grunt ) {
                             type: 'input',
                             message: 'Secret key used to secure your passport sessions',
                             default: function() {
-                                var text = "";
-                                var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                                var secretKey = config[ 'clever-auth' ].secretKey !== '' ? config[ 'clever-auth' ].secretKey : '';
 
-                                for( var i=0; i < 20; i++ ) {
-                                    text += possible.charAt(Math.floor(Math.random() * possible.length));
+                                if ( secretKey === '' ) {
+                                    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+                                    for( var i=0; i < 20; i++ ) {
+                                        secretKey += possible.charAt(Math.floor(Math.random() * possible.length));
+                                    }
                                 }
 
-                                return text;
+                                return secretKey;
                             }
                         },
                         {
@@ -89,7 +83,10 @@ module.exports = function( grunt ) {
                             choices: [
                                 { name: 'ORM' },
                                 { name: 'ODM' }
-                            ]
+                            ],
+                            default: function() {
+                                return config[ 'clever-auth' ].driver !== '' ? config[ 'clever-auth' ].driver : 'ORM';
+                            }
                         },
                         {
                             config: 'cleverAuthConfig.sessionStorageDriver',
@@ -99,7 +96,10 @@ module.exports = function( grunt ) {
                                 { name: 'redis' },
                                 { name: 'memcache' },
                                 { name: 'in-memory' }
-                            ]
+                            ],
+                            default: function() {
+                                return config[ 'clever-auth' ].sessionStorageDriver !== '' ? config[ 'clever-auth' ].sessionStorageDriver : 'redis';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -108,7 +108,9 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.redis.host',
                             type: 'input',
                             message: 'Redis host',
-                            default: '127.0.0.1'
+                            default: function() {
+                                return config[ 'clever-auth' ].redis.host !== '' ? config[ 'clever-auth' ].redis.host : 'localhost';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -117,7 +119,9 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.redis.port',
                             type: 'input',
                             message: 'Redis port',
-                            default: '6379'
+                            default: function() {
+                                return config[ 'clever-auth' ].redis.port !== '' ? config[ 'clever-auth' ].redis.port : '6379';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -126,7 +130,9 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.redis.prefix',
                             type: 'input',
                             message: 'Redis prefix',
-                            default: ''
+                            default: function() {
+                                return config[ 'clever-auth' ].redis.prefix !== '' ? config[ 'clever-auth' ].redis.prefix : '';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -135,7 +141,9 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.redis.key',
                             type: 'input',
                             message: 'Redis key',
-                            default: ''
+                            default: function() {
+                                return config[ 'clever-auth' ].redis.key !== '' ? config[ 'clever-auth' ].redis.key : '';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -144,7 +152,9 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.memcache.host',
                             type: 'input',
                             message: 'Memcache host',
-                            default: '127.0.0.1'
+                            default: function() {
+                                return config[ 'clever-auth' ].memcache.host !== '' ? config[ 'clever-auth' ].memcache.host : 'localhost';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -153,7 +163,9 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.memcache.port',
                             type: 'input',
                             message: 'Memcache port',
-                            default: '6379'
+                            default: function() {
+                                return config[ 'clever-auth' ].memcache.port !== '' ? config[ 'clever-auth' ].memcache.port : '11211';
+                            }
                         },
                         {
                             when: function( answers ) {
@@ -162,7 +174,112 @@ module.exports = function( grunt ) {
                             config: 'cleverAuthConfig.memcache.prefix',
                             type: 'input',
                             message: 'Memcache prefix',
+                            default: function() {
+                                return config[ 'clever-auth' ].memcache.prefix !== '' ? config[ 'clever-auth' ].memcache.prefix : '';
+                            }
+                        }
+                    ]
+                }
+            },
+            cleverAuthSeedDataPrompt: {
+                options: {
+                    questions: [
+                        {
+                            config: 'cleverauth.username',
+                            type: 'input',
+                            message: 'Default Username',
+                            default: 'test',
+                        },
+                        {
+                            type: 'confirm',
+                            config: 'cleverauth.overwrite',
+                            message: 'Overwrite existing user with the same username?',
+                            when: function( answers ) {
+                                seed.UserModel.forEach( function( user, i ) {
+                                    if ( user.username === answers[ 'cleverauth.username' ] ) {
+                                        foundUser = i;
+                                    }
+                                });
+
+                                return foundUser !== false;
+                            }
+                        },
+                        {
+                            config: 'cleverauth.password',
+                            type: 'password',
+                            message: 'Default Users Password',
+                            default: 'clever',
+                            when: function( answers ) {
+                                if ( answers[ 'cleverauth.overwrite' ] === undefined || answers[ 'cleverauth.overwrite' ] === true ) {
+                                    return true;
+                                } else {
+                                    grunt.fail.fatal( 'Username `' + answers[ 'cleverauth.username' ] + '` already exists in seed data and you chose not to overwrite it!' );
+                                }
+                            }
+                        },
+                        {
+                            config: 'cleverauth.email',
+                            type: 'input',
+                            message: 'Default Users Email',
+                            default: 'test@cleverstack.io'
+                        },
+                        {
+                            type: 'confirm',
+                            config: 'cleverauth.overwrite',
+                            message: 'Overwrite existing user with the same email?',
+                            when: function( answers ) {
+                                if ( answers[ 'cleverauth.overwrite' ] === true ) {
+                                    return false;
+                                } else {
+                                    seed.UserModel.forEach( function( user, i ) {
+                                        if ( user.email === answers[ 'cleverauth.email' ] ) {
+                                            foundUser = i;
+                                        }
+                                    });
+
+                                    return foundUser !== false;
+                                }
+                            }
+                        },
+                        {
+                            config: 'cleverauth.firstname',
+                            type: 'input',
+                            message: 'Default Users Firstname',
+                            default: 'Clever',
+                            when: function( answers ) {
+                                if ( answers[ 'cleverauth.overwrite' ] === undefined || answers[ 'cleverauth.overwrite' ] === true ) {
+                                    return true;
+                                } else {
+                                    grunt.fail.fatal( 'Email `' + answers[ 'cleverauth.email' ] + '` already exists in seed data and you chose not to overwrite it!' );
+                                }
+                            }
+                        },
+                        {
+                            config: 'cleverauth.lastname',
+                            type: 'input',
+                            message: 'Default Users Lastname',
+                            default: 'User',
+                        },
+                        {
+                            config: 'cleverauth.phone',
+                            type: 'input',
+                            message: 'Default Users Phone Number',
                             default: ''
+                        },
+                        {
+                            config: 'cleverauth.hasAdminRight',
+                            type: 'confirm',
+                            message: 'Default User has admin rights'
+                        },
+                        {
+                            config: 'cleverauth.confirmed',
+                            type: 'confirm',
+                            message: 'Default User has confirmed their email'
+                        },
+                        {
+                            config: 'cleverauth.active',
+                            type: 'confirm',
+                            message: 'Default User has an active account'
                         }
                     ]
                 }
@@ -173,54 +290,44 @@ module.exports = function( grunt ) {
         
         grunt.registerTask( 'prompt:cleverAuthConfig', [ 'prompt:cleverAuthConfigPrompt', 'createCleverAuthConfig' ] );
         grunt.registerTask( 'createCleverAuthConfig', 'Adds the config for cleverAuth to the designated environment', function ( ) {
-            var conf            = grunt.config( 'cleverAuthConfig' )
-              , defaultConfig   = require( path.join( __dirname, 'config', 'default.json' ) )
-              , env             = conf.environment
-              , configFile      = path.resolve( path.join( __dirname, '..', '..', 'config', env + '.json' ) )
-              , config          = _.extend( {}, defaultConfig );
+            var conf = grunt.config( 'cleverAuthConfig' );
 
             delete conf.environment;
 
-            if ( fs.existsSync( configFile ) ) {
-                config = _.extend( config, require( configFile ) );
-            }
+            config[ 'clever-auth' ] = _.extend( config[ 'clever-auth' ], conf );
 
-            if ( config[ 'clever-auth' ].sessionStorageDriver === 'redis' ) {
-                delete config[ 'clever-auth' ].memache;
-            } else if ( config[ 'clever-auth' ].sessionStorageDriver === 'memcache' ) {
+            if ( config[ 'clever-auth' ].sessionStorageDriver !== 'redis' ) {
                 delete config[ 'clever-auth' ].redis;
             }
 
-            config[ 'clever-auth' ] = _.extend( config[ 'clever-auth' ], conf );
+            if ( config[ 'clever-auth' ].sessionStorageDriver !== 'memcache' ) {
+                delete config[ 'clever-auth' ].memcache;
+            }
 
             fs.writeFileSync( configFile, JSON.stringify( config, null, '  ' ) );
         });
         
         grunt.registerTask( 'prompt:cleverAuthSeedData', [ 'prompt:cleverAuthSeedDataPrompt', 'authSeedData' ] );
-        grunt.registerTask( 'authSeedData', 'Creates seed data for clever-auth module', function ( ) {
-            var conf = grunt.config( 'cleverauth' )
-              , obj  = {
-                    'UserModel': []
-                }
-              , file = path.join( process.cwd(), 'modules', 'clever-auth', 'schema', 'seedData.json' );
+        grunt.registerTask( 'authSeedData', 'Creates seed data for clever-auth module', function() {
+            var conf = grunt.config( 'cleverauth' );
 
-            if (fs.existsSync( file )) {
-                obj = require( file );
+            // Make sure the required array is there
+            seed.UserModel = seed.UserModel || [];
+
+            // Remove the user if there is a duplicate
+            if ( foundUser !== false ) {
+                seed.UserModel.splice( foundUser, 1 );
             }
+            delete conf.overwrite;
 
-            conf.active = true;
-            conf.confirmed = true;
-            conf.hasAdminRight = true;
+            // Update the password hash
             conf.password = crypto.createHash( 'sha1' ).update( conf.password ).digest( 'hex' );
 
-            if ( obj.UserModel[ 0 ] && obj.UserModel[ 0 ].username === 'test' ) {
-                obj.UserModel.shift();
-            }
+            seed.UserModel.push( conf );
 
-            obj.UserModel = obj.UserModel || [];
-            obj.UserModel.push( conf );
+            fs.writeFileSync( seedFile, JSON.stringify( seed, null, '  ' ) );
 
-            fs.writeFileSync( file, JSON.stringify( obj, null, '  ' ) );
+            console.log( 'You should run `clever grunt db clever-auth` to rebase and seed this data in your database...' );
         });
     }];
 };

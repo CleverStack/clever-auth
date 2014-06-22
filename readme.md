@@ -16,6 +16,12 @@ See [cleverstack.io](http://cleverstack.io/documentation/#backend) for more deta
 ## Configuration
 You can use this module with either the clever-orm (ORM) or clever-odm (ODM) modules, simply add the following config to your /config/local.json (or into your global.json for all environments, or in whatever environment you are using).
 
+### Grunt
+1. `grunt prompt:cleverAuthConfig` can be used to generate your config for any environment you want
+2. `grunt prompt:cleverAuthSeed` can be used to add/edit users inside your seed data
+
+### Configuration files
+
 ```
 // For ODM
 "clever-auth": {

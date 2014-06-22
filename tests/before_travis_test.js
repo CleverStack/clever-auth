@@ -244,24 +244,24 @@ function seedDataForAuthModule() {
 
         console.log( 'step #7 - grunt prompt:cleverAuthSeed clever-auth module - begin\n' );
 
-        proc.stdout.on('data', function (data) {
+        proc.stdout.on('data', function( data ) {
             var str = data.toString();
 
-            objs.forEach ( function ( obj, i ) {
+            objs.forEach ( function( obj, i ) {
                 if ( obj.done !== true && str.match( obj.reg ) !== null ) {
-                    objs[i].done = true;
+                    objs[ i ].done = true;
                     proc.stdin.write( obj.write );
                 } 
             });
         });
 
-        proc.stderr.on('data', function (data) {
+        proc.stderr.on('data', function( data ) {
             console.log( 'Error in step #7 - ' + data.toString() + '\n');
             reject ( data.toString() );
         });
 
-        proc.on('close', function (code) {
-            console.log('step #7 process exited with code ' + code + '\n' );
+        proc.on('close', function( code ) {
+            console.log( 'step #7 process exited with code ' + code + '\n' );
             resolve();
         });
     });
@@ -269,16 +269,18 @@ function seedDataForAuthModule() {
 
 function rebaseDb() {
     return new Promise( function( resolve, reject ) {
+        var proc = spawn( 'grunt', [ 'db' ], { cwd: path.join( __dirname, '../', prName ) } );
+
         console.log( 'step #8 - rebase db' );
 
-        exec( 'grunt db', { stdio: 'inherit', cwd: path.join( __dirname, '../', prName ) }, function( err ) {
-            if ( err !== null ) {
-                console.log( 'Error in step #8 - ' + data.toString() + '\n');
-                reject( err );
-            } else {
-                console.log('step #8 process exited with code ' + code + '\n' );
-                resolve();
-            }
+        proc.stderr.on('data', function( data ) {
+            console.log( 'Error in step #8 - ' + data.toString() + '\n' );
+            reject( data.toString() );
+        });
+
+        proc.on('close', function( code ) {
+            console.log('step #8 process exited with code ' + code + '\n' );
+            resolve();
         });
     });
 }

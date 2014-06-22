@@ -19,17 +19,42 @@ You can use this module with either the clever-orm (ORM) or clever-odm (ODM) mod
 ```
 // For ODM
 "clever-auth": {
-  "driver": "ODM"
+  	"driver": "ODM"
 }
 
 // For ORM
 "clever-auth": {
-  "driver": "ORM"
+  	"driver": "ORM"
+}
+
+// Using In-Memory Session Storage
+"clever-auth": {
+  	"sessionStoreDriver": "in-memory"
+}
+
+// Using Redis for Session Storage
+"clever-auth": {
+  	"sessionStoreDriver": "redis",
+    "redis": {
+        "host": "localhost",
+        "port": "6379",
+        "prefix": "",
+        "key": ""
+    }
+}
+
+// Using Memcache for Session Storage
+"clever-auth": {
+  	"sessionStoreDriver": "redis",
+    "memcache": {
+        "host": "localhost",
+        "port": "11211",
+        "prefix": ""
+    }
 }
 ```
 
 ## Setup
-Prerequisite: Install and run Redis Server - http://redis.io/
 
 ### Using CLI
 1. Run `clever install clever-auth` and follow the prompts
@@ -38,8 +63,10 @@ Prerequisite: Install and run Redis Server - http://redis.io/
 ### Without CLI
 1. Clone this repo (or untar it there) into your modules folder (ie modules/clever-auth)
 2. Add 'clever-auth' to the bundledDependencies array of your app's package.json.
-3. Run `grunt db` to rebase and seed the data.
-4. Run `grunt server` to start your application.
+3. Run `grunt prompt:cleverAuthConfig` and fill in your configuration options.
+4. Run `grunt prompt:cleverAuthSeed` and create your default user.
+5. Run `grunt db` to rebase and seed the data.
+6. Run `grunt server` to start your application.
 
 ## Test Account Credentials
 

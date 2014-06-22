@@ -44,7 +44,7 @@ module.exports = function( grunt ) {
                             filter: function( env ) {
                                 _.extend( config, defaultConfig );
 
-                                configFile = path.resolve( path.join( __dirname, '..', '..', 'config', env.toLowerCase() + '.json' ) );
+                                configFile = path.resolve( path.join( __dirname, '..', '..', 'config', env + '.json' ) );
 
                                 if ( fs.existsSync( configFile ) ) {
                                     _.extend( config, require( configFile ) );

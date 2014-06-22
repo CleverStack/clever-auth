@@ -1,5 +1,6 @@
 var Promise = require( 'bluebird' )
   , spawn   = require( 'child_process' ).spawn
+  , exec    = require( 'child_process' ).exec
   , path    = require( 'path' )
   , fs      = require( 'fs' )
   , rimraf  = require( 'rimraf' )
@@ -261,9 +262,6 @@ function seedDataForAuthModule() {
 
         proc.on('close', function (code) {
             console.log('step #7 process exited with code ' + code + '\n' );
-            console.log( process.env.NODE_PATH );
-            console.dir( require( path.resolve( path.join( __dirname, '..', prName, 'config' ) ) ) );
-            console.dir( require( path.resolve( path.join( __dirname, '..', prName, 'package.json' ) ) ) );
             resolve();
         });
     });
@@ -271,18 +269,16 @@ function seedDataForAuthModule() {
 
 function rebaseDb() {
     return new Promise( function( resolve, reject ) {
-        var proc = spawn( 'grunt', [ 'db' ], { stdio: 'inherit', cwd: path.join( __dirname, '../', prName ) } );
-
         console.log( 'step #8 - rebase db' );
 
-        proc.stderr.on('data', function (data) {
-            console.log( 'Error in step #8 - ' + data.toString() + '\n');
-            reject ( data.toString() );
-        });
-
-        proc.on('close', function (code) {
-            console.log('step #8 process exited with code ' + code + '\n' );
-            resolve();
+        exec( 'grunt', { stdio: 'inherit', cwd: path.join( __dirname, '../', prName ) }, function( err ) {
+            if ( err !== null ) {
+                console.log( 'Error in step #8 - ' + data.toString() + '\n');
+                reject( err );
+            } else {
+                console.log('step #8 process exited with code ' + code + '\n' );
+                resolve();
+            }
         });
     });
 }

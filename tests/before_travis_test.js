@@ -271,7 +271,7 @@ function rebaseDb() {
     return new Promise( function( resolve, reject ) {
         console.log( 'step #8 - rebase db' );
 
-        exec( 'grunt', { stdio: 'inherit', cwd: path.join( __dirname, '../', prName ) }, function( err ) {
+        exec( 'grunt db', { stdio: 'inherit', cwd: path.join( __dirname, '../', prName ) }, function( err ) {
             if ( err !== null ) {
                 console.log( 'Error in step #8 - ' + data.toString() + '\n');
                 reject( err );

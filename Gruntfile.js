@@ -33,12 +33,13 @@ module.exports = function( grunt ) {
                             message: 'What environment is this configuration for?',
                             choices: [
                                 { name: 'LOCAL' },
+                                { name: 'TEST' },
                                 { name: 'DEV' },
                                 { name: 'STAG' },
                                 { name: 'PROD' }
                             ],
                             default: function() {
-                                return process.env.NODE_ENV || 'LOCAL';
+                                return process.env.NODE_ENV ? process.env.NODE_ENV.toUpperCase() : 'LOCAL';
                             },
                             filter: function( env ) {
                                 _.extend( config, defaultConfig );

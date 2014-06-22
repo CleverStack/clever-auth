@@ -32,13 +32,53 @@ function createProject() {
     });
 }
 
-//copy clever-auth module in test project
+function installORM() {
+    return new Promise( function( resolve, reject ) {
+        var objs = [
+                { reg: /Database username/ , write: 'travis\n'   , done: false },
+                { reg: /Database password/ , write: '\n'         , done: false },
+                { reg: /Database name/     , write: 'test_db\n'  , done: false },
+                { reg: /Database dialect/  , write: '\n'         , done: false },
+                { reg: /Database port/     , write: '3306\n'     , done: false },
+                { reg: /Database host/     , write: '127.0.0.1\n', done: false },
+            ]
+          , proc = spawn ( 'clever', [ 'install', 'clever-orm' ], { cwd: path.join( __dirname, '../', prName ) } );
+
+        console.log( 'step #2 - install clever-orm module - begin\n' );
+
+        proc.stdout.on('data', function (data) {
+            var str = data.toString();
+
+            if ( str.match( /ing/ ) !== null ) {
+                console.log( str )
+            } 
+
+            objs.forEach ( function ( obj, i ) {
+                if ( obj.done !== true && str.match( obj.reg ) !== null ) {
+                    objs[i].done = true;
+                    proc.stdin.write( obj.write );
+                } 
+            });
+        });
+
+        proc.stderr.on('data', function (data) {
+            console.log( 'Error in step #2 - ' + data.toString() + '\n');
+            reject ( data.toString() );
+        });
+
+        proc.on('close', function (code) {
+            console.log('step #2 process exited with code ' + code + '\n' );
+            resolve();
+        });
+    });
+}
+
 function copyAuthModule () {
     return new Promise( function( resolve, reject ) {
         var fromDir = path.join( __dirname, '../' )
           , toDir   = path.join( __dirname, '../', prName, 'modules', 'clever-auth' );
 
-        console.log( 'step #2 - copy clever-auth module in test project - begin\n' );
+        console.log( 'step #3 - copy clever-auth module in test project - begin\n' );
 
         function copyDir ( from, to ) {
             var files = fs.readdirSync( from );
@@ -56,7 +96,7 @@ function copyAuthModule () {
                 fs.stat( path.join( from, file ), function ( err, stats ) {
                     
                     if ( err ) {
-                        console.log( 'Error in step #2 - ' + err + '\n');
+                        console.log( 'Error in step #3 - ' + err + '\n');
                         reject ( err );
                     }
 
@@ -67,7 +107,7 @@ function copyAuthModule () {
                     if ( stats && stats.isDirectory() && file != prName && file != 'node_modules' ) {
                         ncp( path.join( from, file ), path.join( to, file ), function ( err ) {
                             if (err) {
-                                console.log( 'Error in step #2 - ' + err + '\n');
+                                console.log( 'Error in step #3 - ' + err + '\n');
                                 reject ( err );
                             }
                         });
@@ -93,7 +133,7 @@ function copyAuthModule () {
 
         copyDir( fromDir, toDir );
 
-        console.log('step #2 process exited with code 0\n' );
+        console.log('step #3 process exited with code 0\n' );
         resolve();
     });
 }
@@ -102,12 +142,12 @@ function addAuthToBundled() {
     return new Promise( function( resolve, reject ) {
         var file = path.join( __dirname, '../', prName, 'package.json' );
 
-        console.log( 'step #3 - added clever-auth module in bundledDependencies\n' );
+        console.log( 'step #4 - added clever-auth module in bundledDependencies\n' );
 
         fs.readFile ( file, function ( err, data ) {
 
             if ( err ) {
-                console.log( 'Error in step #3 - ' + err + '\n');
+                console.log( 'Error in step #4 - ' + err + '\n');
                 return reject ( err );
             }
 
@@ -115,16 +155,34 @@ function addAuthToBundled() {
 
             data.bundledDependencies.push ( 'clever-auth' );
 
-            fs.writeFile ( file, JSON.stringify ( data ), function ( err ) {
+            fs.writeFile ( file, JSON.stringify ( data, null, '  ' ), function ( err ) {
 
                 if ( err ) {
-                    console.log( 'Error in step #3 - ' + err + '\n');
+                    console.log( 'Error in step #4 - ' + err + '\n');
                     return reject ( err );
                 }
 
-                console.log('step #3 process exited with code 0\n' );
+                console.log('step #4 process exited with code 0\n' );
                 resolve();
             });
+        });
+    });
+}
+
+function setupAuthModule() {
+    return new Promise( function( resolve, reject ) {
+        var proc = spawn( 'clever', [ 'setup' ], { cwd: path.join( __dirname, '../', prName ) } );
+
+        console.log( 'step #5 - clever setup auth module (will install ORM) - begin\n' );
+
+        proc.stderr.on('data', function (data) {
+            console.log( 'Error in step #5 - ' + data.toString() + '\n');
+            reject ( data.toString() );
+        });
+
+        proc.on('close', function (code) {
+            console.log('step #5 process exited with code ' + code + '\n' );
+            resolve();
         });
     });
 }
@@ -143,99 +201,10 @@ function configureAuthModule() {
             ]
           , proc = spawn ( 'grunt', [ 'prompt:cleverAuthConfig'], { cwd: path.join( __dirname, '../', prName ) } );
 
-        console.log( 'step #4 - grunt prompt:cleverAuthConfig clever-auth module - begin\n' );
+        console.log( 'step #6 - configure clever-auth module - begin\n' );
 
         proc.stdout.on('data', function (data) {
             var str = data.toString();
-
-            if ( str.match( /ing/ ) !== null ) {
-                console.log( str )
-            } 
-
-            objs.forEach ( function ( obj, i ) {
-                if ( obj.done !== true && str.match( obj.reg ) !== null ) {
-                    objs[i].done = true;
-                    proc.stdin.write( obj.write );
-                } 
-            });
-        });
-
-        proc.stderr.on('data', function (data) {
-            console.log( 'Error in step #4 - ' + data.toString() + '\n');
-            reject ( data.toString() );
-        });
-
-        proc.on('close', function (code) {
-            console.log('step #4 process exited with code ' + code + '\n' );
-            resolve();
-        });
-    });
-}
-
-function seedDataForAuthModule() {
-    return new Promise( function( resolve, reject ) {
-        var objs = [
-                { reg: /Default Username\: \(test\)/, write: '\n', done: false },
-                { reg: /Default Users Password\: \(clever\)/, write: '\n', done: false },
-                { reg: /Default Users Email\: \(test@cleverstack.io\)/, write: '\n', done: false },
-                { reg: /Default Users Firstname\: \(Clever\)/, write: '\n', done: false },
-                { reg: /Default Users Lastname\: \(User\)/, write: '\n', done: false },
-                { reg: /Default Users Phone Number\:/, write: '\n', done: false },
-                { reg: /Default User has admin rights\: \(Y\/n\)/, write: '\n', done: false },
-                { reg: /Default User has confirmed their email\: \(Y\/n\)/, write: '\n', done: false },
-                { reg: /Default User has an active account\: \(Y\/n\)/, write: '\n', done: false }
-            ]
-          , proc = spawn ( 'grunt', [ 'prompt:cleverAuthSeed'], { cwd: path.join( __dirname, '../', prName ) } );
-
-        console.log( 'step #5 - grunt prompt:cleverAuthSeed clever-auth module - begin\n' );
-
-        proc.stdout.on('data', function (data) {
-            var str = data.toString();
-
-            if ( str.match( /ing/ ) !== null ) {
-                console.log( str )
-            } 
-
-            objs.forEach ( function ( obj, i ) {
-                if ( obj.done !== true && str.match( obj.reg ) !== null ) {
-                    objs[i].done = true;
-                    proc.stdin.write( obj.write );
-                } 
-            });
-        });
-
-        proc.stderr.on('data', function (data) {
-            console.log( 'Error in step #5 - ' + data.toString() + '\n');
-            reject ( data.toString() );
-        });
-
-        proc.on('close', function (code) {
-            console.log('step #5 process exited with code ' + code + '\n' );
-            resolve();
-        });
-    });
-}
-
-function installORM() {
-    return new Promise( function( resolve, reject ) {
-        var objs = [
-                { reg: /Database username/ , write: 'travis\n'   , done: false },
-                { reg: /Database password/ , write: '\n'         , done: false },
-                { reg: /Database name/     , write: 'test_db\n'  , done: false },
-                { reg: /Database dialect/  , write: '\n'         , done: false },
-                { reg: /Database port/     , write: '3306\n'     , done: false },
-                { reg: /Database host/     , write: '127.0.0.1\n', done: false },
-            ]
-          , proc = spawn ( 'clever', [ 'install', 'clever-orm' ], { cwd: path.join( __dirname, '../', prName ) } );
-
-        console.log( 'step #6 - install clever-orm module - begin\n' );
-
-        proc.stdout.on('data', function (data) {
-            var str = data.toString();
-
-            if ( str.match( /ing/ ) !== null ) {
-                console.log( str )
-            } 
 
             objs.forEach ( function ( obj, i ) {
                 if ( obj.done !== true && str.match( obj.reg ) !== null ) {
@@ -257,12 +226,53 @@ function installORM() {
     });
 }
 
-createProject()    
+function seedDataForAuthModule() {
+    return new Promise( function( resolve, reject ) {
+        var objs = [
+                { reg: /Default Username\: \(test\)/, write: '\n', done: false },
+                { reg: /Default Users Password\: \(clever\)/, write: '\n', done: false },
+                { reg: /Default Users Email\: \(test@cleverstack.io\)/, write: '\n', done: false },
+                { reg: /Default Users Firstname\: \(Clever\)/, write: '\n', done: false },
+                { reg: /Default Users Lastname\: \(User\)/, write: '\n', done: false },
+                { reg: /Default Users Phone Number\:/, write: '\n', done: false },
+                { reg: /Default User has admin rights\: \(Y\/n\)/, write: '\n', done: false },
+                { reg: /Default User has confirmed their email\: \(Y\/n\)/, write: '\n', done: false },
+                { reg: /Default User has an active account\: \(Y\/n\)/, write: '\n', done: false }
+            ]
+          , proc = spawn ( 'grunt', [ 'prompt:cleverAuthSeed'], { cwd: path.join( __dirname, '../', prName ) } );
+
+        console.log( 'step #7 - grunt prompt:cleverAuthSeed clever-auth module - begin\n' );
+
+        proc.stdout.on('data', function (data) {
+            var str = data.toString();
+
+            objs.forEach ( function ( obj, i ) {
+                if ( obj.done !== true && str.match( obj.reg ) !== null ) {
+                    objs[i].done = true;
+                    proc.stdin.write( obj.write );
+                } 
+            });
+        });
+
+        proc.stderr.on('data', function (data) {
+            console.log( 'Error in step #7 - ' + data.toString() + '\n');
+            reject ( data.toString() );
+        });
+
+        proc.on('close', function (code) {
+            console.log('step #7 process exited with code ' + code + '\n' );
+            resolve();
+        });
+    });
+}
+
+createProject() 
+    .then( installORM )
     .then( copyAuthModule )
     .then( addAuthToBundled )
+    .then( setupAuthModule )
     .then( configureAuthModule )
     .then( seedDataForAuthModule )
-    .then( installORM )
     .catch ( function (err) {
         console.log('Error - ' + err );
     });

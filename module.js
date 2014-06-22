@@ -1,6 +1,6 @@
 var injector     = require( 'injector' )
+  , express      = injector.getInstance( 'express' )
   , passport     = require( 'passport' )
-  , connectRedis = require( 'connect-redis' )( injector.getInstance( 'express' ) )
   , Module       = require( 'classes' ).Module;
 
 module.exports = Module.extend({
@@ -8,16 +8,29 @@ module.exports = Module.extend({
     sessionStore: null,
 
     preSetup: function () {
-        if ( !!this.config.redis ) {
-            var env = process.env.NODE_ENV ? process.env.NODE_ENV : 'local';
+        var env          = process.env.NODE_ENV ? process.env.NODE_ENV : 'local'
+          , storeDriver  = this.config.sessionStorageDriver
 
-            this.config.redis.prefix = !!this.config.redis.prefix
-                ? this.config.redis.prefix + env + '_'
-                : env + '_';
-
-            this.debug( 'Configuring connect-redis for use as session storage: ' + JSON.stringify( this.config.redis ) );
-            this.sessionStore = new connectRedis( this.config.redis );
+        this.debug( 'Using ' + storeDriver + ' as sessionStorageDriver...' )
+        if ( storeDriver === 'redis' ) {
+            this.setupRedisSessionStore( env, this.config.redis );
+        } else if ( storeDriver === 'memcache' ) {
+            this.setupMemcacheSessionStore( env, this.config.memcache );
         }
+    },
+
+    setupRedisSessionStore: function( env, redisConfig ) {
+        this.debug( 'Configuring connect-redis for use as session storage: ' + JSON.stringify( redisConfig ) );
+
+        redisConfig.prefix = !!redisConfig.prefix ? redisConfig.prefix + env + '_' : env + '_';
+        this.sessionStore = new ( require( 'connect-redis' )( express ) )( redisConfig );
+    },
+
+    setupMemcacheSessionStore: function( env, memcacheConfig ) {
+        this.debug( 'Configuring connect-memcached for use as session storage: ' + JSON.stringify( memcacheConfig ) );
+
+        memcacheConfig.prefix = !!memcacheConfig.prefix ? memcacheConfig.prefix + env + '_' : env + '_';
+        this.sessionStore = new ( require( 'connect-memcached' )( express.session ) )( memcacheConfig )
     },
 
     preInit: function() {
@@ -27,18 +40,23 @@ module.exports = Module.extend({
         injector.instance( 'sessionStore', this.sessionStore )
     },
 
-    configureApp: function( app, express ) {
+    configureApp: function( app ) {
         this.debug( 'Configuring express to use the cookieParser...' );
         app.use( express.cookieParser() );
         
         this.debug( 'Configuring session management...' );
 
+        var sessionConfig = {
+            secret: this.config.secretKey,
+            cookie: { secure: false, maxAge: 86400000 }
+        };
+
+        if ( this.config.sessionStorageDriver !== 'in-memory' ) {
+            sessionConfig.store = this.sessionStore;
+        }
+
         app.use( 
-            express.session({
-                secret: this.config.secretKey,
-                cookie: { secure: false, maxAge: 86400000 },
-                store: this.sessionStore
-            })
+            express.session( sessionConfig )
         );
 
         this.debug( 'Configuring passport initialize middleware...' );

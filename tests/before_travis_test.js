@@ -261,6 +261,7 @@ function seedDataForAuthModule() {
 
         proc.on('close', function (code) {
             console.log('step #7 process exited with code ' + code + '\n' );
+            console.log( process.env.NODE_PATH );
             console.dir( require( path.resolve( path.join( __dirname, '..', prName, 'config' ) ) ) );
             console.dir( require( path.resolve( path.join( __dirname, '..', prName, 'package.json' ) ) ) );
             resolve();

@@ -14,17 +14,17 @@ module.exports = function( grunt ) {
       , seed            = {}
       , foundUser       = false;
 
-    if ( fs.existsSync( seedFile ) ) {
-        seed = require( seedFile );
-    }
-
     if ( fs.existsSync( authSeedFile ) ) {
         _.extend( seed, require( authSeedFile ) );
     }
 
+    if ( fs.existsSync( seedFile ) ) {
+        _.extend( seed, require( seedFile ) );
+    }
+
     return [{
         prompt: {
-            cleverAuthConfigPrompt: {
+            authConfigPrompt: {
                 options: {
                     questions: [
                         {
@@ -181,7 +181,7 @@ module.exports = function( grunt ) {
                     ]
                 }
             },
-            cleverAuthSeedDataPrompt: {
+            authSeedDataPrompt: {
                 options: {
                     questions: [
                         {
@@ -288,7 +288,7 @@ module.exports = function( grunt ) {
     }, function( grunt ) {
         grunt.loadNpmTasks( 'grunt-prompt' );
         
-        grunt.registerTask( 'prompt:cleverAuthConfig', [ 'prompt:cleverAuthConfigPrompt', 'createCleverAuthConfig' ] );
+        grunt.registerTask( 'prompt:cleverAuthConfig', [ 'prompt:authConfigPrompt', 'createCleverAuthConfig' ] );
         grunt.registerTask( 'createCleverAuthConfig', 'Adds the config for cleverAuth to the designated environment', function ( ) {
             var conf = grunt.config( 'cleverAuthConfig' );
 
@@ -307,7 +307,7 @@ module.exports = function( grunt ) {
             fs.writeFileSync( configFile, JSON.stringify( config, null, '  ' ) );
         });
         
-        grunt.registerTask( 'prompt:cleverAuthSeedData', [ 'prompt:cleverAuthSeedDataPrompt', 'authSeedData' ] );
+        grunt.registerTask( 'prompt:cleverAuthSeed', [ 'prompt:authSeedDataPrompt', 'authSeedData' ] );
         grunt.registerTask( 'authSeedData', 'Creates seed data for clever-auth module', function() {
             var conf = grunt.config( 'cleverauth' );
 

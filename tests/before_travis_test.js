@@ -266,6 +266,24 @@ function seedDataForAuthModule() {
     });
 }
 
+function rebaseDb() {
+    return new Promise( function( resolve, reject ) {
+        var proc = spawn ( 'grunt', [ 'db'], { cwd: path.join( __dirname, '../', prName ) } );
+
+        console.log( 'step #8 - grunt db - begin\n' );
+
+        proc.stderr.on('data', function (data) {
+            console.log( 'Error in step #8 - ' + data.toString() + '\n');
+            reject ( data.toString() );
+        });
+
+        proc.on('close', function (code) {
+            console.log('step #8 process exited with code ' + code + '\n' );
+            resolve();
+        });
+    });
+}
+
 createProject() 
     .then( installORM )
     .then( copyAuthModule )
@@ -273,6 +291,7 @@ createProject()
     .then( setupAuthModule )
     .then( configureAuthModule )
     .then( seedDataForAuthModule )
+    .then( rebaseDb )
     .catch ( function (err) {
         console.log('Error - ' + err );
     });

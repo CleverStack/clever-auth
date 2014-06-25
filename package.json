@@ -1,6 +1,29 @@
 {
   "name": "clever-auth",
+  "description": "CleverStack Authentication Module",
   "version": "1.0.3",
+  "main": "module.js",
+  "author": {
+    "name": "CleverStack",
+    "email": "admin@cleverstack.io",
+    "web": "http://cleverstack.io"
+  },
+  "collaborators": [
+    "Richard Gustin <richard.gustin86@gmail.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/CleverStack/clever-auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CleverStack/clever-auth/issues"
+  },
+  "keywords": [
+    "cleverstack",
+    "cleverstack-module",
+    "cleverstack-backend"
+  ],
+  "license": "BSD-2-Clause",
   "dependencies": {
     "passport": "^0.2.0",
     "passport-facebook": "~1.0.2",
@@ -11,35 +34,11 @@
     "redis": "~0.10.0",
     "moment": "~2.5.1"
   },
-  "scripts": {
-    "test": "grunt test:unit"
-  },
-  "author": {
-    "name": "CleverStack",
-    "email": "admin@cleverstack.io",
-    "web": "http://cleverstack.io"
-  },
-  "collaborators": [
-    "Richard Gustin <richard.gustin86@gmail.com>"
-  ],
-  "description": "CleverStack Authentication Module",
-  "keywords": [
-    "cleverstack",
-    "clevertech",
-    "cleverstack-module",
-    "cleverstack-backend"
-  ],
-  "license": "BSD-2-Clause",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/CleverStack/clever-auth.git"
-  },
-  "bugs": {
-    "url": "https://github.com/CleverStack/clever-auth/issues"
-  },
-  "main": "module.js",
   "devDependencies": {
     "grunt": "~0.4.2"
+  },
+  "scripts": {
+    "test": "grunt test:unit"
   },
   "bundledDependencies": [
     "clever-orm"

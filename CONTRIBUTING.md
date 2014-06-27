@@ -8,7 +8,7 @@ Contributing to a project is not only adding slabs of code, fixing bugs, or crea
 
 > I just wanted to thank you for not only looking into contributing towards CleverStack, but for even taking your time to considering it. I'm personally always available to lend out a hand, and I hope you never feel as if you can't reach out to me. I always look forward to discussing ideas, solving problems, and colloborating with others.
 
-> - Daniel Durante
+> - Richard Gustin
 
 ## Submitting bug reports, issues, or enhancement requests.
 
@@ -26,3 +26,7 @@ There are currently a few resources available to reach out to us:
 3. Refactors and documentation changes do not require a test, but if you're adding a new function please write a tests for that feature.
 4. Please follow the [coding guidelines](https://github.com/CleverStack/clever-auth/blob/master/.jshintrc)
 5. Push your changes and submit a [pull request](https://github.com/CleverStack/clever-auth/compare/) to the master branch.
+
+## License
+
+See our [LICENSE](https://github.com/CleverStack/clever-auth/blob/master/LICENSE)

@@ -1,18 +1,19 @@
-var crypto = require( 'crypto' )
-  , moment = require( 'moment' )
-  , LocalStrategy = require( 'passport-local' ).Strategy;
+var crypto          = require( 'crypto' )
+  , qs              = require ( 'qs' )
+  , LocalStrategy   = require( 'passport-local' ).Strategy
+  , GoogleStrategy;
 
-module.exports = function ( Controller, passport, UserService ) {
+module.exports = function( config, Controller, passport, UserService ) {
 
-    passport.serializeUser( function ( user, done ) {
+    passport.serializeUser( function( user, done ) {
         done( null, user );
     });
 
-    passport.deserializeUser( function ( user, done ) {
+    passport.deserializeUser( function( user, done ) {
         done( null, user )
     });
 
-    passport.use( new LocalStrategy( function ( username, password, done ) {
+    passport.use( new LocalStrategy( function( username, password, done ) {
         var credentials = {
             email: username,
             password: crypto.createHash( 'sha1' ).update( password ).digest( 'hex' ),
@@ -25,6 +26,28 @@ module.exports = function ( Controller, passport, UserService ) {
             .catch( done );
     }));
 
+    if ( config[ 'clever-auth' ].enabledStrategies && config[ 'clever-auth' ].enabledStrategies.google ) {
+        GoogleStrategy = require ( 'passport-google-oauth' ).OAuth2Strategy;
+        passport.use( new GoogleStrategy(
+            {
+                clientID: config[ 'clever-auth' ].enabledStrategies.google.clientId,
+                clientSecret: config[ 'clever-auth' ].enabledStrategies.google.clientSecret,
+                callbackURL: config[ 'clever-auth' ].enabledStrategies.google.redirectURIs
+            },
+            function( accessToken, refreshToken, profile, done ) {
+
+                UserService
+                    .findOrCreate( profile, accessToken )
+                    .then( function( user ) {
+                        return UserService.authenticate( user, profile )
+                    })
+                    .then( UserGoogleService.updateAccessedDate )
+                    .then( done.bind( null, null ) )
+                    .catch( done );
+            }
+        ));
+    }
+
     return Controller.extend(
         {
             autoRouting: [ 'requiresLogin' ],
@@ -32,18 +55,10 @@ module.exports = function ( Controller, passport, UserService ) {
             service: UserService,
 
             requiresLogin: function ( req, res, next ) {
-                var parts = req.url 
-                        ? req.url.split('/')
-                        : false
-                  , action = parts && parts.length > 2
-                        ? parts.pop()
-                        : false
-                  , route = parts
-                        ? parts.pop()
-                        : false
-                  , method = req.method
-                        ? req.method.toLowerCase()
-                        : false;
+                var parts = req.url ? req.url.split('/') : false
+                  , action = parts && parts.length > 2 ? parts.pop() : false
+                  , route = parts ? parts.pop() : false
+                  , method = req.method ? req.method.toLowerCase() : false;
                 
                 if ( req.isAuthenticated() || ( route === 'user' && ( method === 'post' || action === 'login' || action === 'current' ) ) ) {
                     return next();
@@ -144,9 +159,30 @@ module.exports = function ( Controller, passport, UserService ) {
                 passport.authenticate( 'local', this.proxy( 'handleLocalUser' ) )( this.req, this.res, this.next );
             }, //tested
 
+            googleLoginAction: function () {
+                var params = {
+                    response_type: "code",
+                    client_id: config[ 'clever-auth' ].enabledStrategies.google.clientId,
+                    redirect_uri: config[ 'clever-auth' ].enabledStrategies.google.redirectURIs,
+                    display: "popup",
+                    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email"
+                };
+
+                this.send( { url: 'https://accounts.google.com/o/oauth2/auth?' + qs.stringify( params ) }, 200 );
+            }, //tested
+
+            googleLoginReturnAction: function () {
+                passport.authenticate( 'google', this.proxy( 'handleLocalUser' ) )( this.req, this.res, this.next );
+            },
+
             handleLocalUser: function ( err, user ) {
-                if ( err ) return this.handleException( err );
-                if ( !user ) return this.send( {}, 403 );
+                if ( err ) {
+                    return this.handleException( err );
+                }
+                if ( !user ) {
+                    return this.send( {}, 403 );
+                }
+
                 this.loginUserJson( user );
             }, //tested through loginAction
 
@@ -155,7 +191,9 @@ module.exports = function ( Controller, passport, UserService ) {
             }, //tested through loginAction,  putAction, currentAction
 
             handleLoginJson: function ( user, err ) {
-                if ( err ) return this.handleException( err );
+                if ( err ) {
+                    return this.handleException( err );
+                }
                 this.send( user, 200 );
             }, //tested through loginAction,  putAction
 
@@ -337,12 +375,16 @@ module.exports = function ( Controller, passport, UserService ) {
             },
 
             resendAction: function () {
-                var me = this.req.user
-                  , userId = this.req.params.id
-                  , data = this.req.body;
+                var me      = this.req.user
+                  , userId  = this.req.params.id;
 
                 var tplData = {
-                    firstName: this.req.user.firstname, accountSubdomain: this.req.user.account.subdomain, userFirstName: '', userEmail: '', tplTitle: 'Account Confirmation', subject: this.req.user.firstname + ' wants to add you to their recruiting team!'
+                    firstName: this.req.user.firstname,
+                    accountSubdomain: this.req.user.account.subdomain,
+                    userFirstName: '',
+                    userEmail: '',
+                    tplTitle: 'Account Confirmation',
+                    subject: this.req.user.firstname + ' wants to add you to their team!'
                 };
 
                 UserService
@@ -350,17 +392,7 @@ module.exports = function ( Controller, passport, UserService ) {
                     .then( this.proxy( 'handleServiceMessage' ) )
                     .then( this.proxy( 'handleException' ) );
 
-            },
-
-            handleServiceMessage: function ( obj ) {
-
-                if ( obj.statuscode ) {
-                    this.send( obj.message, obj.statuscode );
-                    return;
-                }
-
-                this.send( obj, 200 );
             }
 
-        } );
+        });
 };

@@ -11,6 +11,33 @@ module.exports = function ( Model, config ) {
             primaryKey: true,
             autoIncrement: true
         },
+        token: {
+            type: String,
+            allowNull: true
+        },
+        googleid: {
+            type: String,
+            allowNull: true
+        },
+        picture: {
+            type: String,
+            allowNull: true
+        },
+        link: {
+            type: String,
+            allowNull: true
+        },
+        gender: {
+            type: String,
+            allowNull: true,
+            validate: {
+                isIn: [ 'male', 'female' ]
+            }
+        },
+        locale: {
+            type: String,
+            allowNull: true
+        },
         title: {
             type: String
         },

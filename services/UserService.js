@@ -1,11 +1,10 @@
 var crypto      = require( 'crypto' )
   , Promise     = require( 'bluebird' )
   , moment      = require( 'moment' )
-  , injector    = require( 'injector' )
   , config      = require( 'config' )
   , debug       = require( 'debug' )( 'cleverAuth' );
 
-module.exports = function ( Service, UserModel ) {
+module.exports = function( Service, UserModel ) {
     var EmailService = null;
 
     return Service.extend({

@@ -85,3 +85,7 @@ Note: You can just run `grunt db`, `grunt db:rebase` and `grunt db:seed` but if 
 
 username: `test@cleverstack.io` <br>
 password: `clever`
+
+## License
+
+See our [LICENSE](https://github.com/CleverStack/clever-auth/blob/master/LICENSE)

@@ -70,7 +70,7 @@ module.exports = function( config, Controller, passport, UserService ) {
             requiresAdminRights: function ( req, res, next ) {
 
                 if ( !req.isAuthenticated() || !req.session.passport.user || !req.session.passport.user.hasAdminRight ) {
-                    return res.send( 403 );
+                    return res.send( 401 );
                 }
 
                 next();

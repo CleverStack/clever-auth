@@ -86,13 +86,14 @@ module.exports = function( config, Controller, passport, UserService ) {
     }
 
     var UserController = Controller.extend({
+        
+        service: UserService,
+        
         autoRouting: [
             function( req, res, next ) {
                 return UserController.requiresLogin( routesRequiringLogin )( req, res, next );
             }
         ],
-
-        service: UserService,
 
         requiresLogin: function( requiredRoutes ) {
             /*
@@ -172,23 +173,26 @@ module.exports = function( config, Controller, passport, UserService ) {
                 })
                 .then( function( result ){
                     if( result.length ){
-                        return res.json( 403, { error: 'This email "' + email + '" is already taken' } );
+                        return res.json( 403, { message: 'This email "' + email + '" is already taken' } );
                     }
                     next();
                 })
                 .catch( function(err){
-                    return res.json( 500, { error: 'There was an error: ' + err } );
+                    return res.json( 500, { message: 'There was an error: ' + err } );
                 });
         },
 
         requiresAdminRights: function ( req, res, next ) {
-
             if ( !req.isAuthenticated() || !req.session.passport.user || !req.session.passport.user.hasAdminRight ) {
                 return res.send( 401 );
             }
 
             next();
-        }, //tested
+        },
+
+
+
+        
 
         checkPasswordRecoveryData: function ( req, res, next ) {
             var userId = req.body.userId

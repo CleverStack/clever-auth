@@ -64,7 +64,7 @@ module.exports = function( config, Controller, passport, UserService ) {
                     return next();
                 }
 
-                res.send( 401 );
+                res.send( 401, { statusCode: 401, message: 'User is not authenticated!' } );
             }, //tested
 
             requiresUniqueUser: function( req, res, next ){

@@ -67,6 +67,26 @@ module.exports = function( config, Controller, passport, UserService ) {
                 res.send( 401 );
             }, //tested
 
+            requiresUniqueUser: function( req, res, next ){
+                var email = req.body.email;
+
+                UserService
+                    .find({
+                        where: {
+                            email: email
+                        }
+                    })
+                    .then( function( result ){
+                        if( result.length ){
+                            return res.json( 403, 'This email "' + email + '" is already taken' );
+                        }
+                        next();
+                    })
+                    .catch( function(err){
+                        return res.json( 500, 'There was an error: ' + err );
+                    });
+            },
+
             requiresAdminRights: function ( req, res, next ) {
 
                 if ( !req.isAuthenticated() || !req.session.passport.user || !req.session.passport.user.hasAdminRight ) {

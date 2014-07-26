@@ -42,7 +42,5 @@
   "scripts": {
     "test": "grunt test:unit"
   },
-  "bundledDependencies": [
-    "clever-orm"
-  ]
+  "bundledDependencies": []
 }

@@ -27,7 +27,7 @@
   "dependencies": {
     "passport": "^0.2.0",
     "passport-facebook": "~1.0.2",
-    "passport-google-oauth": "~0.1.5",
+    "passport-google": "~0.1.5",
     "passport-local": "~0.1.6",
     "connect-redis": "~1.4.6",
     "connect-memcached": "~0.1.0",

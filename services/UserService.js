@@ -14,7 +14,12 @@ module.exports = function( Service, UserModel ) {
         authenticate: function ( credentials ) {
             return new Promise( function( resolve, reject ) {
                 UserModel
-                    .find( credentials )
+                    .find({
+                        where: {
+                            email: credentials.email,
+                            password: credentials.password
+                        }
+                    })
                     .then( function( user ) {
                         if ( !!user && !!user.id ) {
                             if ( !!user.active ) {
@@ -23,10 +28,10 @@ module.exports = function( Service, UserModel ) {
                                     .then( resolve )
                                     .catch( reject );
                             } else {
-                                resolve( { statuscode: 403, message: "Login is not active for " + user.email + '.' }  );
+                                reject( "Login is not active for " + user.email + '.' );
                             }
                         } else {
-                            resolve( { statuscode: 403, message: "User doesn't exist." }  );
+                            reject( "User doesn't exist." );
                         }
                     })
                     .catch( reject );
@@ -123,6 +128,25 @@ module.exports = function( Service, UserModel ) {
                 } );
         },
 
+        findOrCreate: function( data ) {
+            var that = this;
+
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( { where: { email: data.email } } )
+                    .then( function( user ) {
+                        if ( user !== null ) {
+                            resolve( user );
+                        } else {
+                            that.create( data )
+                                .then( resolve )
+                                .catch( reject );
+                        }
+                    })
+                    .catch( reject );
+            });
+        },
+
         //tested
         create: function( data, tplData ) {
             var _super = this._super
@@ -130,7 +154,7 @@ module.exports = function( Service, UserModel ) {
 
             return new Promise( function( resolve, reject ) {
                 UserModel
-                    .find( { email: data.email } )
+                    .find( { where: { email: data.email } } )
                     .then( function( user ) {
                         if ( user !== null ) {
                             return resolve( { statuscode: 400, message: 'Email already exist' } );

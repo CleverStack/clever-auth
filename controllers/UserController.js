@@ -262,9 +262,7 @@ module.exports = function( config, Controller, passport, UserService ) {
                 .then( this.proxy( function( user ) {
                     require( 'clever-auth' ).controllers.AuthController.authenticate.apply( this, [ null, user ] );
                 }))
-                .catch( this.proxy( function( err ) {
-                    this.send( { statusCode: 400, message: err }, 400 );
-                }));
+                .catch( this.proxy( 'handleServiceMessage' ) )
         },
 
         /**
@@ -277,9 +275,7 @@ module.exports = function( config, Controller, passport, UserService ) {
                 .then( this.proxy( function( user ) {
                     require( 'clever-auth' ).controllers.AuthController.updateSession.apply( this, [ user ] );
                 }))
-                .catch( this.proxy( function( err ) {
-                    this.send( { statusCode: 400, message: err }, 400 );
-                }));
+                .catch( this.proxy( 'handleServiceMessage' ) )
         },
 
         /**

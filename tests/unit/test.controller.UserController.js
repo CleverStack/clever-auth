@@ -260,7 +260,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                 })
               , res = fakeResponse(function( status, response ) {
                     expect( status ).to.equal( 400 );
-                    expect( response ).to.be.an( 'object' ).and.to.eql( { statusCode: 400, message: 'Email already exists' } );
+                    expect( response ).to.be.an( 'object' ).and.to.eql( { statusCode: 400, message: 'Email joe@example.com already exists' } );
 
                     done();
                 })
@@ -289,7 +289,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                 })
               , res = fakeResponse(function( status, response ) {
                     expect( status ).to.equal( 400 );
-                    expect( response ).to.be.an( 'object' ).and.to.eql( { statusCode: 400, message: 'Unable to create User because of email is required.'} );
+                    expect( response ).to.be.an( 'object' );
+                    expect( response ).to.have.property( 'message' ).and.to.eql( 'email is required.' );
 
                     done();
                 })
@@ -391,9 +392,9 @@ describe( 'CleverAuth.Controller.UserController', function () {
               , res = fakeResponse(function( status, result ) {
 
                     // Check the result/response
-                    expect( status ).to.equal( 400 );
+                    expect( status ).to.equal( 404 );
                     expect( result ).to.be.an( 'object' );
-                    expect( result.message ).to.be.an( 'string' ).and.equal( 'Unable to update User, unable to determine identity.' );
+                    expect( result ).to.have.property( 'message' ).and.equal( 'Unable to update User, unable to determine identity.' );
                     
                     expect( next.called ).to.eql( false );
 

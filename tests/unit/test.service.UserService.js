@@ -1,191 +1,306 @@
-return;
-var expect = require ( 'chai' ).expect
-  , request = require ( 'supertest' )
-  , path = require( 'path' )
-  , app = require ( path.resolve( __dirname + '/../../../../' ) + '/index.js' )
-  , config = require( 'config' )
-  , testEnv = require ( 'utils' ).testEnv()
-  , sinon = require( 'sinon' )
-  , Q = require ( 'q' );
+var expect      = require( 'chai' ).expect
+  , utils       = require( 'utils' )
+  , injector    = require( 'injector' )
+  , exceptions  = require( 'exceptions' )
+  , sinon       = require( 'sinon' )
+  , env         = utils.bootstrapEnv()
+  , Service     = injector.getInstance( 'Service' )
+  , Model       = injector.getInstance( 'Model' )
+  , UserModel
+  , UserService;
 
-var EmailService = null;
+describe( 'CleverAuth.Service.UserService', function () {
 
-var user_1, user_1_json, old_password;
-describe( 'service.UserService', function () {
-    var UserService;
+    before( function( done ) {
+        UserService = injector.getInstance( 'cleverAuth' ).services.UserService;
+        UserModel   = injector.getInstance( 'cleverAuth' ).models.UserModel;
 
-    before( function ( done ) {
-        this.timeout( 15000 );
-        testEnv( function ( _UserService_, _ORMUserModel_ ) {
+        done();
+    });
 
-            UserService = _UserService_;
-            UserModel = _ORMUserModel_;
+    it( 'should have loaded the test service', function( done ) {
+        expect( UserService instanceof Service.Class ).to.eql( true );
+        expect( UserService.on ).to.be.a( 'function' );
+        expect( UserService.find ).to.be.a( 'function' );
+        expect( UserService.findAll ).to.be.a( 'function' );
+        expect( UserService.create ).to.be.a( 'function' );
+        expect( UserService.update ).to.be.a( 'function' );
+        expect( UserService.destroy ).to.be.a( 'function' );
+        expect( UserService.query ).to.be.a( 'function' );
+        expect( UserService.model ).to.equal( UserModel );
 
-            done();
-        }, done );
-    } );
+        done();
+    });
 
     describe( '.authenticate( credentials )', function () {
 
-        it( 'should return User with specified credentials', function ( done ) {
-            var data1 = {
-                username: 'Joe',
-                email: 'joe@example.com',
-                password: '1234'
-            };
-            var data2 = {
-                username: 'Rachel',
-                email: 'rachel@example.com',
-                password: '1234'
-            };
+        var joesData = {
+            username:   'Joe',
+            email:      'joe@cleverAuth.com',
+            password:   '1234'
+        };
+        var rachelsData = {
+            username:   'Rachel',
+            email:      'rachel@cleverAuth.com',
+            password:   '1234'
+        };
 
-            UserService.create( data1 )
-                .then( function () {
-                    return UserService.create( data2 );
-                } )
-                .then( function () {
-                    return UserService.authenticate( {
-                        email: 'rachel@example.com',
-                        password: '1234'
-                    } )
-                        .then( function ( user ) {
+        it( 'should return a User with specified credentials', function( done ) {
+            UserService
+                .create( joesData )
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( joesData.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( joesData.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( joesData.password );
 
-                            expect( user ).to.be.an( 'object' ).and.be.ok;
-                            expect( user ).to.have.property( 'username' ).and.equal( data2.username );
-                            expect( user ).to.have.property( 'email' ).and.equal( data2.email );
-                            expect( user ).to.not.have.property( 'password' );
+                    return UserService.create( rachelsData )
+                })
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( rachelsData.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( rachelsData.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( rachelsData.password );
 
-                            done();
-                        } );
-                } )
-                .fail( done );
-        } );
+                    rachelsData.updatedAt = model.updatedAt;
 
-        it( 'should not return user when he is not active', function ( done ) {
+                    return UserService.authenticate({
+                        email:      rachelsData.email,
+                        password:   rachelsData.password
+                    });
+                })
+                .then( function( model ) {
+                    expect( model instanceof UserModel ).to.eql( true );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( rachelsData.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( rachelsData.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( rachelsData.password );
+
+                    // Make sure it updates the accessedAt field after a successful login
+                    expect( model ).to.have.property( 'accessedAt' ).and.to.not.eql( rachelsData.accessedAt );
+
+                    done();
+                })
+                .catch( done );
+        });
+
+        it( 'should return an error when the user is inactive', function( done ) {
             var data = {
-                username: 'Joe3',
-                email: 'joe3@example.com',
-                password: '1234',
-                active: false
+                username:   'joeInactive@example.com',
+                email:      'joeInactive@example.com',
+                password:   '1234',
+                active:     false
             };
 
             UserService
                 .create( data )
-                .then( function () {
-                    return UserService.authenticate( {
-                        email: data.email,
-                        password: data.password
-                    } );
-
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.not.be.ok;
+                .then( function() {
+                    return UserService.authenticate({
+                        email:      data.email,
+                        password:   data.password
+                    });
+                })
+                .then( function( user ) {
+                    expect( user ).to.eql( undefined );
+                })
+                .catch( function( err ) {
+                    expect( err instanceof exceptions.UserNotActive ).to.eql( true );
+                    expect( err ).to.have.property( 'message' ).and.to.eql( 'Login is not active for joeInactive@example.com.' );
+                    expect( err ).to.have.property( 'statusCode' ).and.to.eql( 403 );
 
                     done();
-                } )
-                .fail( done );
-        } );
+                });
+        });
+    });
 
-        it( 'should set "accessedAt" property after successfull login', function ( done ) {
+    describe( '.create( data )', function () {
 
-            var lastLogin = null
-              , data = {
-                    username: 'Joe5',
-                    email: 'joe5@example.com',
-                    password: '1234',
-                    active: true
-                };
+        it( 'cannot create duplicate users with the same email', function( done ) {
+
+            var data = {
+                username:   'noduplicates@example.com',
+                email:      'noduplicates@example.com',
+                password:   '1234'
+            };
 
             UserService
                 .create( data )
-                .then( function () {
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( data.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( data.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( data.password );
 
-                    return UserService.authenticate( {
-                        email: data.email,
-                        password: data.password
-                    } );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'accessedAt' ).and.be.ok;
-
-                    lastLogin = user.accessedAt;
-
-                    return lastLogin;
-                } )
-                .delay( 1000 )
-                .then( function () {
-                    return UserService.authenticate( {
-                        email: data.email,
-                        password: data.password
-                    } );
-                } )
-                .then( function ( user ) {
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'accessedAt' ).and.not.equal( lastLogin );
+                    return UserService.create( data );
+                })
+                .then( function( user ) {
+                    expect( user ).to.eql( undefined );
+                })
+                .catch( function( err ) {
+                    expect( err instanceof exceptions.DuplicateModel ).to.eql( true );
+                    expect( err ).to.have.property( 'message' ).and.to.eql( 'Email ' + data.email + ' already exists' );
 
                     done();
-                } )
-                .fail( done );
-        } );
+                });
+        });
 
-    } );
+        it( 'should create a user', function( done ) {
 
-    describe( '.getUserFullDataJson( options )', function () {
-
-        it( 'should return User with specified options', function ( done ) {
             var data = {
-                username: 'Rachel8',
-                email: 'rachel8@example.com',
+                username:   'newUser@cleverAuth.com',
+                email:      'newUser@cleverAuth.com',
+                password:   '1234'
+            };
+
+            UserService
+                .create( data )
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( data.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( data.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( data.password );
+
+                    done();
+                })
+                .catch( done );
+        });
+
+        it( 'should auto generate random password when password is not given', function( done ) {
+
+            var data = {
+                username:   'autoGeneratePassword@cleverAuth.com',
+                email:      'autoGeneratePassword@cleverAuth.com'
+            };
+
+            UserService
+                .create( data )
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( data.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( data.email );
+                    expect( model ).to.have.property( 'password' ).and.to.not.equal( undefined );
+
+                    done();
+                })
+                .catch( done );
+        });
+
+        it.skip( 'should call .generatePasswordResetHash method if EmailService exist and do not call otherwise', function ( done ) {
+            sinon.spy( UserService, "generatePasswordResetHash" );
+
+            var data = {
+                username: 'Rachel21',
+                email: 'rachel21@example.com',
                 password: '1234'
             };
 
-            UserService.create( data )
+            UserService
+                .createUser( data )
                 .then( function () {
-                    return UserService.getUserFullDataJson( { email: data.email } );
-                } )
-                .then( function ( user ) {
 
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
+                    if ( EmailService !== null && config['clever-auth'].email_confirmation ) {
 
+                        expect( UserService.generatePasswordResetHash.calledOnce ).to.be.true;
+
+                        UserService
+                            .generatePasswordResetHash
+                            .restore();
+                    } else {
+
+                        expect( UserService.generatePasswordResetHash.calledOnce ).to.be.false;
+
+                    }
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should return empty object when options does not match in the db', function ( done ) {
+        it.skip( 'should call .mailPasswordRecoveryToken method if EmailService exist and do not call otherwise', function ( done ) {
+            this.timeout( 5000 );
+            sinon.spy( UserService, "mailPasswordRecoveryToken" );
+
             var data = {
-                username: 'Rachel10',
-                email: 'rachel10@example.com',
+                username: 'Rachel22',
+                email: 'rachel22@example.com',
                 password: '1234'
             };
 
-            UserService.create( data )
+            UserService
+                .createUser( data )
                 .then( function () {
-                    return UserService.getUserFullDataJson( { email: 'noneExistedEmail2@somemail.com' } );
-                } )
-                .then( function ( user ) {
 
-                    expect( user ).to.be.empty;
+                    if ( EmailService !== null && config['clever-auth'].email_confirmation ) {
 
+                        expect( UserService.mailPasswordRecoveryToken.calledOnce ).to.be.true;
+
+                        UserService
+                            .mailPasswordRecoveryToken
+                            .restore();
+                    } else {
+
+                        expect( UserService.mailPasswordRecoveryToken.calledOnce ).to.be.false;
+
+                    }
                     done();
                 } )
                 .fail( done );
-        } );
+        }); 
+    });
 
-    } );
+    describe( '.update( idOrWhere, data )', function () {
 
-    describe( '.generatePasswordResetHash( user )', function () {
+        it( 'hash password when new password is given', function ( done ) {
 
-        it( 'should return data for user confirmation', function ( done ) {
+            var data = {
+                username:   'hashPassword@cleverAuth.com',
+                email:      'hashPassword@cleverAuth.com',
+                password:   '1234'
+            };
+            var originalPassword = null;
+
+            UserService
+                .create( data )
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( data.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( data.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( data.password );
+
+                    originalPassword = data.password;
+
+                    data.password = 'hashedPassword';
+
+                    return UserService.update( model.id, data );
+                })
+                .then( function( model ) {
+                    expect( model instanceof Model ).to.eql( true );
+                    expect( model ).to.be.an( 'object' );
+                    expect( model ).to.have.property( 'id' );
+                    expect( model ).to.have.property( 'username' ).and.to.eql( data.username );
+                    expect( model ).to.have.property( 'email' ).and.to.eql( data.email );
+                    expect( model ).to.have.property( 'password' ).and.to.eql( data.password ).and.to.not.eql( originalPassword );
+
+                    done();
+                })
+                .catch( done );
+        });
+    });
+
+    describe.skip( '.generatePasswordResetHash( user )', function () {
+
+        it.skip( 'should return data for user confirmation', function ( done ) {
 
             var data = {
                 username: 'Rachel12',
@@ -226,9 +341,9 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should return data for password recovery', function ( done ) {
+        it.skip( 'should return data for password recovery', function ( done ) {
 
             var data = {
                 username: 'Rachel13',
@@ -270,9 +385,9 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should return status 403 and message when user missing fields', function ( done ) {
+        it.skip( 'should return status 403 and message when user missing fields', function ( done ) {
             var data = {
                 username: 'Rachel13',
                 email: 'rachel13@example.com',
@@ -290,9 +405,8 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
-
-    } );
+        });
+    });
 
     describe.skip( '.mailPasswordRecoveryToken( obj )', function () {
 
@@ -321,8 +435,7 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-
-        } );
+        });
 
         it.skip( 'should return status 200 and a message for password recovery action ', function ( done ) {
             var data = {
@@ -339,9 +452,9 @@ describe( 'service.UserService', function () {
                     result.should.have.property( 'statuscode', 200 );
                     result.should.have.property( 'message' );
                     done();
-                } )
+                })
                 .fail( done );
-        } );
+        });
 
         it.skip( 'should return status 500 and a message for unrecognized action ', function ( done ) {
             var data = {
@@ -360,579 +473,27 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
-    } );
-
-    describe( '.createUser( data )', function () {
-
-        before( function( done ) {
-            try {
-
-                EmailService = require( 'services' )['EmailService'];
-
-                expect( EmailService ).to.be.ok;
-
-            } catch ( err ) {
-
-                expect( EmailService ).to.not.be.ok;
-
-            }
-
-            done();
         });
-
-        it( 'should return status 400 and a message when user with email exists', function ( done ) {
-
-            var data = {
-                username: 'Rachel18',
-                email: 'rachel18@example.com',
-                password: '1234'
-            };
-
-            UserService
-                .create( data )
-                .then( function () {
-                    return UserService.createUser( data );
-                } )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'statuscode' ).and.equal( 400 );
-                    expect( result ).to.have.property( 'message' ).and.be.an( 'string' ).and.be.ok;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should call .savedNewUser method anytime', function ( done ) {
-            sinon.spy( UserService, "saveNewUser" );
-
-            var data = {
-                username: 'Rachel20',
-                email: 'rachel20@example.com',
-                password: '1234',
-                "AccountId": 1
-            };
-
-            UserService
-                .createUser( data )
-                .then( function () {
-
-                    expect( UserService.saveNewUser.calledOnce ).to.be.true;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should call .generatePasswordResetHash method if EmailService exist and do not call otherwise', function ( done ) {
-            sinon.spy( UserService, "generatePasswordResetHash" );
-
-            var data = {
-                username: 'Rachel21',
-                email: 'rachel21@example.com',
-                password: '1234'
-            };
-
-            UserService
-                .createUser( data )
-                .then( function () {
-
-                    if ( EmailService !== null && config['clever-auth'].email_confirmation ) {
-
-                        expect( UserService.generatePasswordResetHash.calledOnce ).to.be.true;
-
-                        UserService
-                            .generatePasswordResetHash
-                            .restore();
-                    } else {
-
-                        expect( UserService.generatePasswordResetHash.calledOnce ).to.be.false;
-
-                    }
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should call .mailPasswordRecoveryToken method if EmailService exist and do not call otherwise', function ( done ) {
-            this.timeout( 5000 );
-            sinon.spy( UserService, "mailPasswordRecoveryToken" );
-
-            var data = {
-                username: 'Rachel22',
-                email: 'rachel22@example.com',
-                password: '1234'
-            };
-
-            UserService
-                .createUser( data )
-                .then( function () {
-
-                    if ( EmailService !== null && config['clever-auth'].email_confirmation ) {
-
-                        expect( UserService.mailPasswordRecoveryToken.calledOnce ).to.be.true;
-
-                        UserService
-                            .mailPasswordRecoveryToken
-                            .restore();
-                    } else {
-
-                        expect( UserService.mailPasswordRecoveryToken.calledOnce ).to.be.false;
-
-                    }
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should return user object', function ( done ) {
-
-            var data = {
-                username: 'Rachel23',
-                email: 'rachel23@example.com',
-                password: '1234'
-            };
-
-            UserService
-                .createUser( data )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'password' ).and.be.ok;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-    } );
-
-    describe( '.saveNewUser( data )', function () {
-
-        it( 'should auto generate random password when password is not given', function ( done ) {
-            var data = {
-                username: 'rachel32@example.com',
-                email: 'rachel32@example.com'
-            };
-
-            UserService
-                .saveNewUser( data )
-                .then( function ( newUser ) {
-
-                    expect( newUser ).to.be.an( 'object' ).and.be.ok;
-                    expect( newUser ).to.have.property( 'id' ).and.be.ok;
-                    expect( newUser ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( newUser ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( newUser ).to.have.property( 'password' ).and.be.ok;
-
-                    return UserModel.find( { where: { email: data.email } } );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'password' ).and.be.ok;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should hash password when password is given', function ( done ) {
-
-            var data = {
-                username: 'rachel33@example.com',
-                email: 'rachel33@example.com',
-                password: '123'
-            };
-
-            UserService
-                .saveNewUser( data )
-                .then( function ( newUser ) {
-
-                    expect( newUser ).to.be.an( 'object' ).and.be.ok;
-                    expect( newUser ).to.have.property( 'id' ).and.be.ok;
-                    expect( newUser ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( newUser ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( newUser ).to.have.property( 'password' ).and.be.ok;
-
-                    return UserModel.find( { where: { email: data.email } } );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'password' ).and.not.equal( '123' );
-                    expect( user.password.length ).to.be.ok.and.be.above( '123'.length );
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should return a new user object', function ( done ) {
-            var data = {
-                username: 'rachel34@example.com',
-                email: 'rachel34@example.com',
-                password: '123'
-            };
-
-            UserService
-                .saveNewUser( data )
-                .then( function ( newUser ) {
-
-                    expect( newUser ).to.be.an( 'object' ).and.be.ok;
-                    expect( newUser ).to.have.property( 'id' ).and.be.ok;
-                    expect( newUser ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( newUser ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( newUser ).to.have.property( 'password' ).and.be.ok;
-
-                    return UserModel.find( { where: { email: data.email } } );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.be.ok;
-                    expect( user ).to.have.property( 'username' ).and.equal( data.username );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'password' ).and.be.ok;
-
-                    user_1 = user;
-                    user_1_json = user.toJSON();
-
-                    done();
-                } )
-                .fail( done );
-
-        } );
-
-    } );
-
-    describe( '.updateUser( user, data )', function () {
-
-        it( 'should be able to update firstname, lastname, email, phone and do not update other', function ( done ) {
-            var data = {
-                firstname: 'mishka',
-                lastname: 'mikhajlov',
-                email: 'qwqwqw@mail.ru',
-                phone: '845848485',
-
-                username: 'vasjok',
-                confirmed: true,
-                active: false
-            };
-
-            UserService
-                .updateUser( user_1, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'id' ).and.equal( user_1_json.id );
-
-                    return UserModel.find( user_1.id );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.equal( user_1_json.id );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'firstname' ).and.equal( data.firstname );
-                    expect( user ).to.have.property( 'lastname' ).and.equal( data.lastname );
-                    expect( user ).to.have.property( 'phone' ).and.equal( data.phone );
-
-                    expect( user ).to.have.property( 'username' ).and.not.equal( data.username );
-                    expect( user.username ).to.equal( user_1_json.username );
-                    expect( user ).to.have.property( 'confirmed' ).and.not.equal( data.confirmed );
-                    expect( user.confirmed ).to.equal( user_1_json.confirmed );
-                    expect( user ).to.have.property( 'active' ).and.not.equal( data.active );
-                    expect( user.active ).to.equal( user_1_json.active );
-
-                    user_1_json = user.toJSON();
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-    } );
-
-    describe( '.checkEmailAndUpdate( user, data )', function () {
-
-        it( 'should return status 400 and a message when user with email exists', function ( done ) {
-            var data = {
-                email: 'rachel32@example.com'
-            };
-
-            UserService
-                .checkEmailAndUpdate( user_1, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'statuscode' ).and.equal( 400 );
-                    expect( result ).to.have.property( 'message' ).and.be.an( 'string' ).and.be.ok;
-
-                    return UserModel.find( user_1.id );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.equal( user_1.id );
-                    expect( user ).to.have.property( 'email' ).and.equal( user_1.email );
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should be able to update email ', function ( done ) {
-            var data = {
-                email: 'rachel152@example.com'
-            };
-
-            UserService
-                .checkEmailAndUpdate( user_1, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'id' ).and.equal( user_1.id );
-
-                    return UserModel.find( user_1.id );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.equal( user_1_json.id );
-                    expect( user ).to.have.property( 'username' ).and.equal( user_1_json.username );
-                    expect( user ).to.have.property( 'email' ).and.not.equal( user_1_json.email );
-                    expect( user.email ).to.equal( data.email );
-
-                    user_1_json = user.toJSON();
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should be able to update firstname, lastname, email, phone and do not update other', function ( done ) {
-            var data = {
-                firstname: 'firstname',
-                lastname: 'lastname',
-                email: 'qqq@mail.ru',
-                phone: '09548848',
-
-                username: 'vasjok',
-                confirmed: true,
-                active: false
-            };
-
-            UserService
-                .checkEmailAndUpdate( user_1, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'id' ).and.equal( user_1_json.id );
-
-                    return UserModel.find( user_1.id );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.equal( user_1_json.id );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'firstname' ).and.equal( data.firstname );
-                    expect( user ).to.have.property( 'lastname' ).and.equal( data.lastname );
-                    expect( user ).to.have.property( 'phone' ).and.equal( data.phone );
-
-                    expect( user ).to.have.property( 'username' ).and.not.equal( data.username );
-                    expect( user ).to.have.property( 'confirmed' ).and.not.equal( data.confirmed );
-                    expect( user ).to.have.property( 'active' ).and.not.equal( data.active );
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-    } );
-
-    describe( '.handleUpdateUser( userId, data )', function () {
-
-        it( 'should return status 403 and a message when user with userId do not exists', function ( done ) {
-            var data = {
-                firstname: 'qwqwqw',
-                lastname: 'ererere'
-            };
-
-            UserService
-                .handleUpdateUser( 1515151515, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'statuscode' ).and.equal( 403 );
-                    expect( result ).to.have.property( 'message' ).and.be.an( 'string' ).and.be.ok;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should return status 403 and a message if old password incorrect', function ( done ) {
-            var data = {
-                firstname: 'qwqwqw',
-                lastname: 'ererere',
-                email: 'xcxcxcxcx@mail.ru',
-                phone: '545454545',
-                password: '1223345',
-                new_password: '15151515'
-            };
-
-            UserService
-                .handleUpdateUser( user_1.id, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'statuscode' ).and.equal( 403 );
-                    expect( result ).to.have.property( 'message' ).and.be.an( 'string' ).and.be.ok;
-
-                    return UserModel.find( user_1.id );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.equal( user_1.id );
-                    expect( user ).to.have.property( 'firstname' ).and.not.equal( data.firstname );
-                    expect( user ).to.have.property( 'lastname' ).and.not.equal( data.lastname );
-                    expect( user ).to.have.property( 'email' ).and.not.equal( data.email );
-                    expect( user ).to.have.property( 'phone' ).and.not.equal( data.phone );
-
-                    old_password = user.password;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-        it( 'should hash password and update it', function ( done ) {
-            var data = {
-                firstname: 'qwqwqw',
-                lastname: 'ererere',
-                email: 'xcxcxcxcx@mail.ru',
-                phone: '545454545',
-                password: '123',
-                new_password: '321'
-            };
-
-            expect( user_1.password ).to.equal( old_password );
-
-            UserService
-                .handleUpdateUser( user_1.id, data )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' ).and.be.ok;
-                    expect( result ).to.have.property( 'id' ).and.equal( user_1_json.id );
-
-                    return UserModel.find( user_1.id );
-                } )
-                .then( function ( user ) {
-
-                    expect( user ).to.be.an( 'object' ).and.be.ok;
-                    expect( user ).to.have.property( 'id' ).and.equal( user_1.id );
-                    expect( user ).to.have.property( 'firstname' ).and.equal( data.firstname );
-                    expect( user ).to.have.property( 'lastname' ).and.equal( data.lastname );
-                    expect( user ).to.have.property( 'email' ).and.equal( data.email );
-                    expect( user ).to.have.property( 'phone' ).and.equal( data.phone );
-                    expect( user ).to.have.property( 'password' ).and.not.equal( old_password );
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-    } );
-
-    describe( '.listUsers()', function () {
-
-        it( 'should be able to get list of all users', function ( done ) {
-
-            UserService
-                .listUsers()
-                .then( function ( users ) {
-
-                    expect( users ).to.be.an( 'array' ).and.have.length.above( 1 );
-                    expect( users[0] ).to.be.an( 'object' ).and.be.ok;
-                    expect( users[0] ).to.have.property( 'id' ).and.be.ok;
-                    expect( users[0] ).to.have.property( 'username' ).and.be.ok;
-                    expect( users[0] ).to.have.property( 'email' ).and.be.ok;
-                    expect( users[0] ).to.have.property( 'active' ).and.equal( true );
-                    expect( users[0] ).to.not.have.property( 'password' );
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-    } );
-
-    describe( '.deleteUser( userId )', function () {
-
-        it( 'should be able to get the error if the user does not exist', function ( done ) {
-
-            UserService
-                .deleteUser( 151515115151515151 )
-                .then( function( result ) {
-
-                    expect( result ).to.be.an( 'object' );
-                    expect( result ).to.have.property( 'statuscode' ).and.equal( 403 );
-                    expect( result ).to.have.property( 'message' ).and.be.ok;
-
-                    done();
-                }, done )
-        } );
-
-        it( 'should be able to delete user', function ( done ) {
-
-            UserService
-                .deleteUser( user_1.id )
-                .then( function ( result ) {
-
-                    expect( result ).to.be.an( 'object' );
-                    expect( result ).to.have.property( 'statuscode' ).and.equal( 200 );
-                    expect( result ).to.have.property( 'message' ).and.be.ok;
-
-                    done();
-                } )
-                .fail( done );
-        } );
-
-    } );
+    });
 
     describe.skip( '.resendAccountConfirmation( me, userId )', function () {
-        it( 'should return status code 403 and message when user id does not exist', function ( done ) {
+        it.skip( 'should return status code 403 and message when user id does not exist', function( done ) {
             var userId = 'noneExistedId'
               , accId = 1;
 
             UserService
                 .resendAccountConfirmation( accId, userId )
-                .then( function ( data ) {
+                .then( function( data ) {
                     should.exist( data );
 
                     data.should.be.a( 'object' );
                     data.should.have.property( 'statuscode', 403 );
                     data.should.have.property( 'message' ).and.not.be.empty;
                     done();
-                } )
+                })
+        });
 
-        } );
-
-        it( 'should return status code 403 and message when account ids do not match', function ( done ) {
+        it.skip( 'should return status code 403 and message when account ids do not match', function ( done ) {
             var newuser = {
                     username: 'rachel35@example.com',
                     email: 'rachel35@example.com',
@@ -956,9 +517,9 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should return status code 403 and message when account has been confirmed', function ( done ) {
+        it.skip( 'should return status code 403 and message when account has been confirmed', function ( done ) {
             var newuser = {
                     username: 'rachel36@example.com',
                     email: 'rachel36@example.com',
@@ -983,9 +544,9 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should call .generatePasswordResetHash method ', function ( done ) {
+        it.skip( 'should call .generatePasswordResetHash method ', function ( done ) {
             sinon.spy( UserService, "generatePasswordResetHash" );
 
             var newuser = {
@@ -1019,9 +580,9 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should call .mailPasswordRecoveryToken method ', function ( done ) {
+        it.skip( 'should call .mailPasswordRecoveryToken method ', function ( done ) {
             sinon.spy( UserService, "mailPasswordRecoveryToken" );
 
             var newuser = {
@@ -1055,9 +616,9 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-        } );
+        });
 
-        it( 'should return statuscode 200 and a message', function ( done ) {
+        it.skip( 'should return statuscode 200 and a message', function ( done ) {
 
             var newuser = {
                     username: 'rachel38@example.com',
@@ -1084,9 +645,6 @@ describe( 'service.UserService', function () {
                     done();
                 } )
                 .fail( done );
-
-
-        } );
-
-    } );
-} );
+        });
+    });
+});

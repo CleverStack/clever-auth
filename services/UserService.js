@@ -2,13 +2,88 @@ var crypto      = require( 'crypto' )
   , Promise     = require( 'bluebird' )
   , moment      = require( 'moment' )
   , config      = require( 'config' )
-  , debug       = require( 'debug' )( 'cleverAuth' );
+  , exceptions  = require( 'exceptions' );
 
 module.exports = function( Service, UserModel ) {
-    var EmailService = null;
-
     return Service.extend({
         model: UserModel,
+
+        findOrCreate: function( data ) {
+            var that = this;
+
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( { where: { email: data.email } } )
+                    .then( resolve )
+                    .catch( function( err ) {
+                        if ( err instanceof exceptions.ModelNotFound ) {
+                            that.create( data )
+                                .then( resolve )
+                                .catch( reject );
+                        } else {
+                            throw err;
+                        }
+                    });
+            });
+        },
+
+        create: function( data, tplData ) {
+            var _super = this._super
+              , that   = this;
+
+            return new Promise( function( resolve, reject ) {
+                UserModel
+                    .find( { where: { email: data.email } } )
+                    .then( function( user ) {
+                        if ( user !== null ) {
+                            return reject( new exceptions.DuplicateModel( 'Email ' + data.email + ' already exists' ) );
+                        }
+
+                        try {
+                            EmailService = require( 'services' )[ 'EmailService' ];
+                        } catch ( err ) {
+                            console.error( err );
+                        }
+
+                        // Prepare the data
+                        data.username = data.username || data.email;
+                        data.active = data.active !== undefined ? data.active : true;
+                        data.password = crypto.createHash( 'sha1' ).update( data.password ? data.password : Math.random().toString( 36 ).slice( -14 ) ).digest( 'hex' );
+
+                        if ( EmailService === null || !config[ 'clever-auth' ].email_confirmation ) {
+
+                            data.confirmed = true;
+
+                            _super.apply( that, [ data ] )
+                                .then( resolve )
+                                .catch( reject );
+
+                        } else {
+
+                            data.confirmed = false;
+
+                            _super.apply( that, [ data ] )
+                                .then( function( user ) {
+                                    return service.generatePasswordResetHash( user, tplData );
+                                })
+                                .then( service.mailPasswordRecoveryToken )
+                                .then( resolve )
+                                .catch( reject );
+                        }
+                    })
+                    .catch( reject );
+
+            });
+        },
+
+        update: function( userId, data ) {
+            if ( data.new_password ) {
+                data.password = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
+                delete data.new_password;
+            }
+
+            return this._super( userId, data );
+        },
 
         //tested
         authenticate: function ( credentials ) {
@@ -16,8 +91,8 @@ module.exports = function( Service, UserModel ) {
                 UserModel
                     .find({
                         where: {
-                            email: credentials.email,
-                            password: credentials.password
+                            email:      credentials.email,
+                            password:   credentials.password
                         }
                     })
                     .then( function( user ) {
@@ -28,10 +103,10 @@ module.exports = function( Service, UserModel ) {
                                     .then( resolve )
                                     .catch( reject );
                             } else {
-                                reject( "Login is not active for " + user.email + '.' );
+                                reject( new exceptions.UserNotActive( "Login is not active for " + user.email + '.' ) );
                             }
                         } else {
-                            reject( "User doesn't exist." );
+                            reject( new exceptions.ModelNotFound( "User doesn't exist." ) );
                         }
                     })
                     .catch( reject );
@@ -128,77 +203,6 @@ module.exports = function( Service, UserModel ) {
                 } );
         },
 
-        findOrCreate: function( data ) {
-            var that = this;
-
-            return new Promise( function( resolve, reject ) {
-                UserModel
-                    .find( { where: { email: data.email } } )
-                    .then( function( user ) {
-                        if ( user !== null ) {
-                            resolve( user );
-                        } else {
-                            that.create( data )
-                                .then( resolve )
-                                .catch( reject );
-                        }
-                    })
-                    .catch( reject );
-            });
-        },
-
-        //tested
-        create: function( data, tplData ) {
-            var _super = this._super
-              , that   = this;
-
-            return new Promise( function( resolve, reject ) {
-                UserModel
-                    .find( { where: { email: data.email } } )
-                    .then( function( user ) {
-                        if ( user !== null ) {
-                            return reject( 'Email already exists' );
-                        }
-
-                        try {
-                            EmailService = require( 'services' )[ 'EmailService' ];
-                        } catch ( err ) {
-                            console.error( err );
-                        }
-
-                        // Prepare the data
-                        data.username = data.username || data.email;
-                        data.active = true;
-                        data.password = data.password
-                            ? crypto.createHash( 'sha1' ).update( data.password ).digest( 'hex' )
-                            : Math.random().toString( 36 ).slice( -14 );
-
-                        if ( EmailService === null || !config[ 'clever-auth' ].email_confirmation ) {
-
-                            data.confirmed = true;
-
-                            _super.apply( that, [ data ] )
-                                .then( resolve )
-                                .catch( reject );
-
-                        } else {
-
-                            data.confirmed = false;
-
-                            _super.apply( that, [ data ] )
-                                .then( function( user ) {
-                                    return service.generatePasswordResetHash( user, tplData );
-                                })
-                                .then( service.mailPasswordRecoveryToken )
-                                .then( resolve )
-                                .catch( reject );
-                        }
-                    })
-                    .catch( reject );
-
-            });
-        },
-
         resendAccountConfirmation: function( userId, tplData ) {
             var service = this;
             
@@ -231,15 +235,6 @@ module.exports = function( Service, UserModel ) {
                     .catch( resolve );
             });
 
-        },
-
-        update: function( userId, data ) {
-            if ( data.new_password ) {
-                data.password = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
-                delete data.new_password;
-            }
-
-            return this._super( userId, data );
         }
 
     });

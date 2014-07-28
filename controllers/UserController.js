@@ -74,7 +74,7 @@ module.exports = function( config, Controller, passport, UserService ) {
 
             return function( req, res, next ) {
                 var method          = req.method.toLowerCase()
-                  , action          = req.params.action
+                  , action          = req.params.action ? req.params.action.toLowerCase() : false
                   , requiresLogin   = false;
 
                 if ( !action && method === 'get' && /^\/[^\/]+\/?$/ig.test( req.url ) ) {
@@ -253,16 +253,18 @@ module.exports = function( config, Controller, passport, UserService ) {
          * @return {undefined}
          */
         postAction: function () {
-            if ( this.req.body.id ) {
+            if ( !!this.req.body.id ) {
                 return this.putAction();
             }
 
             UserService
                 .create( this.req.body )
                 .then( this.proxy( function( user ) {
-                    this.emit( 'signIn', user, this )
+                    require( 'clever-auth' ).controllers.AuthController.authenticate.apply( this, [ null, user ] );
                 }))
-                .catch( this.proxy( 'handleException' ) );
+                .catch( this.proxy( function( err ) {
+                    this.send( { statusCode: 400, message: err }, 400 );
+                }));
         },
 
         /**
@@ -273,9 +275,11 @@ module.exports = function( config, Controller, passport, UserService ) {
             UserService
                 .update( this.req.params.id, this.req.body )
                 .then( this.proxy( function( user ) {
-                    this.emit( 'handleSessionUpdate', user, this )
+                    require( 'clever-auth' ).controllers.AuthController.updateSession.apply( this, [ user ] );
                 }))
-                .catch( this.proxy( 'handleException' ) );
+                .catch( this.proxy( function( err ) {
+                    this.send( { statusCode: 400, message: err }, 400 );
+                }));
         },
 
         /**
@@ -287,7 +291,7 @@ module.exports = function( config, Controller, passport, UserService ) {
                 .destroy( this.req.params.id, this.req.body )
                 .then( this.proxy( function() {
                     if ( this.req.params.id === this.req.user.id ) {
-                        this.emit( 'signOut', this )
+                        require( 'clever-auth' ).controllers.AuthController.signOut.apply( this, arguments );
                     } else {
                         this.handleServiceMessage.apply( this, arguments );
                     }

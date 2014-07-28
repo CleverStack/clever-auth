@@ -11,13 +11,7 @@ module.exports = function( config, Controller, passport, UserService, UserContro
 
         route: '/auth',
 
-        autoRouting: [
-            UserController.requiresLogin({
-                all: true,
-                signInAction: false,
-                sessionAction: false
-            })
-        ],
+        autoRouting: [],
 
         localAuth: function( username, password, done ) {
             var credentials = {
@@ -41,11 +35,26 @@ module.exports = function( config, Controller, passport, UserService, UserContro
 
             this.req.login( user, this.proxy( function( err ) {
                 if ( err ) {
-                    this.handleException( err );
+                    this.handleServiceMessage( err );
                 } else {
                     this.send( user, 200 );
                 }
             }));
+        },
+
+        signOut: function() {
+            this.req.logout();
+            this.send( {}, 200 );
+        },
+
+        updateSession: function( user ) {
+            if ( user.id && ( this.req.user.id === user.id ) ) {
+                this.req.user = user;
+                this.send( user, 200 );
+                return;
+            }
+
+            this.send( user, 400 );
         }
     },
     {
@@ -66,7 +75,7 @@ module.exports = function( config, Controller, passport, UserService, UserContro
             UserService
                 .find( user.id )
                 .then( this.proxy( 'updateSession' ) )
-                .catch( this.proxy( 'handleException' ) );
+                .catch( this.proxy( 'handleServiceMessage' ) );
         },
 
         signInAction: function () {
@@ -74,24 +83,15 @@ module.exports = function( config, Controller, passport, UserService, UserContro
         },
 
         signOutAction: function () {
-            this.req.logout();
-            this.res.send( {}, 200 );
+            this.Class.signOut.apply( this, [] );
         },
 
-        updateSession: function() {
-            if ( user.id && ( this.req.user.id === user.id ) ) {
-                this.req.user = user;
-                return;
-            }
-
-            this.handleServiceMessage( user );
+        updateSession: function( user ) {
+            this.Class.updateSession.apply( this, [ user ] );
         }
     });
 
     passport.use( new LocalStrategy( AuthController.callback( 'localAuth' ) ) );
-    // UserController.on( 'signIn', function( user, scope ) {
-    //     AuthController.prototype.authenticate.apply( scope, [ user ] );
-    // });
 
     return AuthController;
 };

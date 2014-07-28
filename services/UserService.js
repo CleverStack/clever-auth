@@ -157,7 +157,7 @@ module.exports = function( Service, UserModel ) {
                     .find( { where: { email: data.email } } )
                     .then( function( user ) {
                         if ( user !== null ) {
-                            return resolve( { statuscode: 400, message: 'Email already exist' } );
+                            return reject( 'Email already exists' );
                         }
 
                         try {
@@ -199,7 +199,7 @@ module.exports = function( Service, UserModel ) {
             });
         },
 
-        resendAccountConfirmation: function ( userId, tplData ) {
+        resendAccountConfirmation: function( userId, tplData ) {
             var service = this;
             
             return new Promise( function( resolve, reject ) {
@@ -233,14 +233,14 @@ module.exports = function( Service, UserModel ) {
 
         },
 
-        update: function ( userId, data ) {
+        update: function( userId, data ) {
             if ( data.new_password ) {
                 data.password = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
                 delete data.new_password;
             }
 
             return this._super( userId, data );
-        } //tested
+        }
 
     });
 };

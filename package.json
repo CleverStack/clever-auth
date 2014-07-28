@@ -1,7 +1,7 @@
 {
   "name": "clever-auth",
   "description": "CleverStack Authentication Module",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "main": "module.js",
   "author": {
     "name": "CleverStack",
@@ -27,7 +27,7 @@
   "dependencies": {
     "passport": "^0.2.0",
     "passport-facebook": "~1.0.2",
-    "passport-google": "~0.1.5",
+    "passport-google": "~0.3.0",
     "passport-local": "~0.1.6",
     "connect-redis": "~1.4.6",
     "connect-memcached": "~0.1.0",

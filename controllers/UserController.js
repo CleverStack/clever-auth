@@ -1,7 +1,6 @@
-var crypto          = require( 'crypto' )
-  , async           = require( 'async' );
+var crypto = require( 'crypto' );
 
-module.exports = function( config, Controller, passport, UserService ) {
+module.exports = function( Controller, UserService, Exceptions, config, passport, async ) {
     var UserController = Controller.extend({
         
         /**
@@ -9,6 +8,18 @@ module.exports = function( config, Controller, passport, UserService ) {
          * @type {Service}
          */
         service: UserService,
+
+        /**
+         * Provide the routes that this Controller is accessible from
+         * @type {Array}
+         */
+        route: [
+            '[POST] /auth/user/?',
+            '/auth/user/:id/?',
+            '/auth/user/:id/:action/?',
+            '/auth/users/?',
+            '/auth/users/:action/?'
+        ],
         
         /**
          * Configure Controller's autoRouting middleware
@@ -75,12 +86,24 @@ module.exports = function( config, Controller, passport, UserService ) {
             return function( req, res, next ) {
                 var method          = req.method.toLowerCase()
                   , action          = req.params.action ? req.params.action.toLowerCase() : false
+                  , id              = req.params.id
                   , requiresLogin   = false;
 
-                if ( !action && method === 'get' && /^\/[^\/]+\/?$/ig.test( req.url ) ) {
+                if ( !!id && !!action && action === 'list' ) {
+                    action = 'get'
+                    req.params.action = 'get';
+                } else if ( !action && method === 'get' && /^\/.*\/(.*\/?)$/ig.test( req.url ) ) {
                     action = 'list';
                 } else if ( /^[0-9a-fA-F]{24}$/.test( action ) || !isNaN( action ) ) {
                     action = 'get';
+                } else {
+                    if ( req.params.action ) {
+                        action = req.params.action;
+                    } else if ( method === 'get' && !id ) {
+                        action = 'list';
+                    } else {
+                        action = method;
+                    }
                 }
 
                 async.waterfall(
@@ -150,13 +173,25 @@ module.exports = function( config, Controller, passport, UserService ) {
 
             return function( req, res, next ) {
                 var method          = req.method.toLowerCase()
-                  , action          = req.params.action
+                  , action          = req.params.action ? req.params.action.toLowerCase() : false
+                  , id              = req.params.id
                   , requiresLogin   = false;
 
-                if ( !action && method === 'get' && /^\/[^\/]+\/?$/ig.test( req.url ) ) {
+                if ( !!id && !!action && action === 'list' ) {
+                    action = 'get'
+                    req.params.action = 'get';
+                } else if ( !action && method === 'get' && /^\/.*\/(.*\/?)$/ig.test( req.url ) ) {
                     action = 'list';
                 } else if ( /^[0-9a-fA-F]{24}$/.test( action ) || !isNaN( action ) ) {
                     action = 'get';
+                } else {
+                    if ( req.params.action ) {
+                        action = req.params.action;
+                    } else if ( method === 'get' && !id ) {
+                        action = 'list';
+                    } else {
+                        action = method;
+                    }
                 }
 
                 async.waterfall(
@@ -201,7 +236,7 @@ module.exports = function( config, Controller, passport, UserService ) {
 
                 );
             }
-        },
+        }, // @TODO this doesn't work?
         
         /**
          * Middleware that can be used on any single route to check that password recovery data has been provided
@@ -229,31 +264,20 @@ module.exports = function( config, Controller, passport, UserService ) {
             }
 
             next();
-        }
+        } // @TODO is this actually needed? i doubt it
     },
     {
         /**
-         * Responds to GET /user/1 or /user/action, we override this method so we can redirect to the
-         * listAction if no id has been provided
-         * 
-         * @return {undefined}
-         */
-        getAction: function () {
-            if ( !!this.req.params.id ) {
-                UserService.find( this.req.params.id )
-                    .then( this.proxy( 'handleServiceMessage' ) )
-                    .catch( this.proxy( 'handleException' ) );
-            } else {
-                this.listAction();
-            }
-        },
-
-        /**
-         * Handles POST /user or GET/POST /user/post, this function will use the UserService to create a new user
+         * Handles POST /auth/user or POST /auth/users, this function will use the UserService to create a new User.
          * @return {undefined}
          */
         postAction: function () {
-            if ( !!this.req.body.id ) {
+            if ( !!this.req.body.id || !!this.req.params.id ) {
+                this.action = 'putAction';
+                if ( !this.req.params.id ) {
+                    this.req.params.id = this.req.body.id;
+                    delete this.req.body.id;
+                }
                 return this.putAction();
             }
 
@@ -266,7 +290,7 @@ module.exports = function( config, Controller, passport, UserService ) {
         },
 
         /**
-         * Handles PUT /user or GET/PUT /user/put, this function will use the UserService to update an existing user
+         * Handles PUT /auth/user/:id or GET/PUT /auth/user/:id/put, this function will use the UserService to update an existing user
          * @return {undefined}
          */
         putAction: function () {
@@ -279,7 +303,7 @@ module.exports = function( config, Controller, passport, UserService ) {
         },
 
         /**
-         * Handles DELETE /user or GET/DELETE /user/delete, this function will use the UserService to delete an existing user
+         * Handles DELETE /auth/user/:id or GET/DELETE /auth/user/:id/delete, this function will use the UserService to delete an existing user
          * @return {undefined}
          */
         deleteAction: function() {
@@ -295,47 +319,29 @@ module.exports = function( config, Controller, passport, UserService ) {
                 .catch( this.proxy( 'handleException' ) );
         },
 
+        /**
+         * Allows a user to request a password recovery (reset) email be sent to them
+         * @return {undefined}
+         */
         recoverAction: function() {
             if ( !this.req.body.email ) {
-                this.send( 'missing email', 400 );
-                return;
+                throw new Exceptions.InvalidData( 'You must provide your Email Address.' );
             }
 
             UserService
-                .find( { where: { email: this.req.body.email } } )
+                .recoverPassword( this.req.body.email )
                 .then( this.proxy( 'handlePasswordRecovery' ) )
                 .catch( this.proxy( 'handleException' ) );
         },
 
-        handlePasswordRecovery: function( user ) {
-            if ( !user.length ) {
-                this.send( {}, 403 );
-                return;
-            }
-
-            UserService
-                .generatePasswordResetHash( user[0] )
-                .then( this.proxy( 'handleMailRecoveryToken' ) )
-                .catch( this.proxy( 'handleException' ) );
-
-        },
-
-        handleMailRecoveryToken: function( recoverData ) {
-            if ( !recoverData.hash && recoverData.statuscode ) {
-                this.handleServiceMessage( recoverData );
-                return;
-            }
-
-            UserService
-                .mailPasswordRecoveryToken( recoverData )
-                .then( this.proxy( "handleServiceMessage" ) )
-                .catch( this.proxy( "handleException" ) );
-        },
-
+        /**
+         * Allows users to post their recoveryToken to reset their password
+         * @return {undefined}
+         */
         resetAction: function() {
-            var userId = this.req.body.userId || this.req.body.user,
-                password = this.req.body.password,
-                token = this.req.body.token;
+            var userId    = this.req.body.id || this.req.body.user,
+                password  = this.req.body.password,
+                token     = this.req.body.token;
 
             UserService
                 .findById( userId )

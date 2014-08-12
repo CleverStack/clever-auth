@@ -2,16 +2,20 @@ var crypto          = require( 'crypto' )
   , injector        = require( 'injector' )
   , LocalStrategy   = require( 'passport-local' ).Strategy;
 
-module.exports = function( config, Controller, passport, UserService, UserController, UserModel ) {
+module.exports = function( Controller, UserService, config, passport ) {
     injector.instance( 'LocalStrategy', LocalStrategy );
 
     var AuthController = Controller.extend({
 
         restfulRouting: false,
 
-        route: '/auth',
+        route: [
+            '/auth/?:action((?!(user|users|google)).)*/?'
+        ],
 
-        autoRouting: [],
+        autoRouting: [
+            //@TODO hookup requiresSignIn or requiresPermission
+        ],
 
         localAuth: function( username, password, done ) {
             var credentials = {

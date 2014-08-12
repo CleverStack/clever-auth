@@ -1,191 +1,189 @@
-var crypto      = require( 'crypto' )
-  , Promise     = require( 'bluebird' )
-  , moment      = require( 'moment' )
-  , config      = require( 'config' )
-  , exceptions  = require( 'exceptions' );
+var crypto = require( 'crypto' )
+  , moment = require( 'moment' );
 
-module.exports = function( Service, UserModel ) {
+module.exports = function( Service, UserModel, Exceptions, Promise, config ) {
+
     return Service.extend({
+
+        /**
+         * User model that will be used with this Service
+         * @type {Model}
+         */
         model: UserModel,
 
-        findOrCreate: function( data ) {
-            var that = this;
-
-            return new Promise( function( resolve, reject ) {
-                UserModel
-                    .find( { where: { email: data.email } } )
-                    .then( resolve )
-                    .catch( function( err ) {
-                        if ( err instanceof exceptions.ModelNotFound ) {
-                            that.create( data )
-                                .then( resolve )
-                                .catch( reject );
-                        } else {
-                            throw err;
-                        }
-                    });
-            });
-        },
-
-        create: function( data, tplData ) {
-            var _super = this._super
-              , that   = this;
+        /**
+         * Makes sure when creating a user that there are no duplicate email addresses and formats/prepares the data
+         * before passing the workload over to Service.create() by using this._super.apply( ... )
+         * 
+         * @param  {Object} data The users data
+         * @return {Promise}
+         */
+        create: function( data ) {
+            var service = this
+              , create  = this._super;
 
             return new Promise( function( resolve, reject ) {
                 UserModel
                     .find( { where: { email: data.email } } )
                     .then( function( user ) {
-                        if ( user !== null ) {
-                            return reject( new exceptions.DuplicateModel( 'Email ' + data.email + ' already exists' ) );
-                        }
 
-                        try {
-                            EmailService = require( 'services' )[ 'EmailService' ];
-                        } catch ( err ) {
-                            console.error( err );
+                        // Don't allow multiple users with the same email address
+                        if ( user !== null ) {
+                            return reject( new Exceptions.DuplicateModel( 'Email ' + data.email + ' already exists' ) );
                         }
 
                         // Prepare the data
-                        data.username = data.username || data.email;
-                        data.active = data.active !== undefined ? data.active : true;
-                        data.password = crypto.createHash( 'sha1' ).update( data.password ? data.password : Math.random().toString( 36 ).slice( -14 ) ).digest( 'hex' );
+                        data.username   = data.username || data.email;
+                        data.active     = data.active !== undefined ? data.active : true;
+                        data.password   = crypto.createHash( 'sha1' ).update( data.password ? data.password : Math.random().toString( 36 ).slice( -14 ) ).digest( 'hex' );
+                        data.confirmed  = !config[ 'clever-auth' ].emailConfirmation ? true : false;
 
-                        if ( EmailService === null || !config[ 'clever-auth' ].email_confirmation ) {
-
-                            data.confirmed = true;
-
-                            _super.apply( that, [ data ] )
-                                .then( resolve )
-                                .catch( reject );
-
-                        } else {
-
-                            data.confirmed = false;
-
-                            _super.apply( that, [ data ] )
-                                .then( function( user ) {
-                                    return service.generatePasswordResetHash( user, tplData );
-                                })
-                                .then( service.mailPasswordRecoveryToken )
-                                .then( resolve )
-                                .catch( reject );
-                        }
+                        // Create the user
+                        return create.apply( service, [ data ] );
                     })
+                    .then( resolve )
                     .catch( reject );
-
             });
         },
 
-        update: function( userId, data ) {
+        /**
+         * Handles password changes before passing workload over to Service.update() to update a User
+         * 
+         * @param  {Mixed} idOrWhere Either an ID or an smart where object
+         * @param  {Object} data     The data you wish to update
+         * @return {Promise}
+         */
+        update: function( idOrWhere, data ) {
             if ( data.new_password ) {
                 data.password = crypto.createHash( 'sha1' ).update( data.new_password ).digest( 'hex' );
                 delete data.new_password;
             }
 
-            return this._super( userId, data );
+            return this._super( idOrWhere, data );
         },
 
-        //tested
+        /**
+         * This is used to check the credentials of a user who is trying to authenticate (signIn)
+         * 
+         * @param  {Object} credentials Object containing email and password
+         * @return {Promise}
+         */
         authenticate: function ( credentials ) {
             return new Promise( function( resolve, reject ) {
+
+                // Make sure we have credentials to authenticate with
+                if ( !credentials.email || !credentials.password ) {
+                    return reject( new Exceptions.InvalidData( ( !credentials.email ? 'Email' : 'Password' ) ) + ' is required.' );
+                }
+
                 UserModel
                     .find({
                         where: {
-                            email:      credentials.email,
-                            password:   credentials.password
+                            email: credentials.email
                         }
                     })
                     .then( function( user ) {
+                        // Ensure we have a valid user object
                         if ( !!user && !!user.id ) {
+
+                            // Make sure the user is active
                             if ( !!user.active ) {
-                                user.accessedAt = Date.now();
-                                user.save()
-                                    .then( resolve )
-                                    .catch( reject );
+
+                                // Make sure the password matches
+                                if ( user.password === credentials.password ) {
+                                    user.accessedAt = Date.now();
+
+                                    // Update the users last accessedAt field
+                                    return user.save();
+                                } else {
+                                    reject( new Exceptions.InvalidLoginCredentials( 'Password is invalid.' ) );
+                                }
                             } else {
-                                reject( new exceptions.UserNotActive( "Login is not active for " + user.email + '.' ) );
+                                reject( new Exceptions.UserNotActive( "Login is not active for " + user.email + '.' ) );
                             }
                         } else {
-                            reject( new exceptions.ModelNotFound( "User doesn't exist." ) );
+                            reject( new Exceptions.InvalidLoginCredentials( "Email address is invalid, User not found." ) );
                         }
                     })
+                    .then( resolve )
                     .catch( reject );
             });
         },
 
-        //tested
-        generatePasswordResetHash: function ( user, tplData ) {
+        /**
+         * Used to request a password recovery token/hash be emailed to a user allowing them to reset their password
+         * 
+         * @param  {String} email The email address of the user
+         * @return {Promise}
+         */
+        recoverPassword: function( email ) {
+            var service = this;
+
             return new Promise( function( resolve, reject ) {
-                var md5 = null
-                  , hash = null
-                  , expTime = null
-                  , actionpath = ( !user.confirmed ) ? 'user/confirm' : 'password_reset_submit'
-                  , mailsubject = ( !user.confirmed ) ? 'User Confirmation' : 'Password Recovery';
-
-                if ( !user || !user.createdAt || !user.updatedAt || !user.password || !user.email ) {
-                    resolve( { statuscode: 403, message: 'Unauthorized' } );
-                } else {
-                    md5 = crypto.createHash( 'md5' );
-                    md5.update( user.createdAt + user.updatedAt + user.password + user.email + 'recover', 'utf8' );
-                    hash = md5.digest( 'hex' );
-                    expTime = moment.utc().add( 'hours', 8 ).valueOf();
-
-                    resolve({
-                        hash: hash,
-                        expTime: expTime,
-                        user: user,
-                        action: actionpath,
-                        mailsubject: mailsubject,
-                        tplData: tplData || null
-                    });
+                if ( !email ) {
+                    return reject( new Exceptions.InvalidLoginCredentials( 'You must provide an email address.' ) );
                 }
+
+                UserModel
+                    .find( { where: { email: email } } )
+                    .then( function( user ) {
+                        return service.generatePasswordResetHash( user );
+                    })
+                    .then( function( recoveryData ) {
+                        return service.mailPasswordRecoveryDetails( recoveryData );
+                    })
+                    .then( resolve )
+                    .catch( reject );
+            });
+        },
+
+        /**
+         * This is used to generate a unique and time limited token for a user to either confirm or reset/recover their password
+         * 
+         * @param  {UserModel} user The user we need to generate a hash for
+         * @return {Promise}
+         */
+        generatePasswordResetHash: function( user ) {
+            return new Promise( function( resolve, reject ) {
+                if ( !user || !user.id ) {
+                    return reject( new Exceptions.InvalidLoginCredentials( 'User doesn\'t exist.' ) );
+                }
+
+                var actionHref  = ( !user.confirmed ) ? 'user/confirm' : 'password_reset_submit'
+                  , subject     = ( !user.confirmed ) ? 'User Confirmation' : 'Password Recovery'
+                  , token       = user.createdAt + user.updatedAt + user.password + user.email + 'recoverPassword'
+                  , hash        = crypto.createHash( 'md5' ).update( token, 'utf8' ).digest( 'hex' );
+
+                resolve({
+                    user:       user,
+                    hash:       hash,
+                    expiry:     moment.utc().add( 'hours', 8 ).valueOf(),
+                    action:     actionHref,
+                    subject:    subject
+                });
             });
         },
 
         // @todo this needs allot of work to get it working as expected
-        mailPasswordRecoveryToken: function ( obj ) {
+        mailPasswordRecoveryDetails: function( data ) {
+            var hostUrl = !!config[ 'clever-auth' ].hostUrl || 'localhost:' + config.webPort
+              , link    =  hostUrl + '/' + data.action + '?u=' + data.user.id + '&t=' + data.hash + '&n=' + encodeURIComponent( data.user.fullName )
+              , payload = {
+                    to:     data.user.email,
+                    text:   (obj.action === 'account_confirm') ? 
+                        "Please click on the link below to activate your account\n " + link :
+                        "Please click on the link below to enter a new password\n " + link
+                }
+              , info    = {
+                    firstname:  data.user.firstname,
+                    email:      data.user.email,
+                    user:       data.user,
+                    tplTitle:   'CleverStack: ' + data.subject
+                };
 
-//            var hosturl = !!config.hosturl
-//                ? config.hosturl
-//                : [ config['clever-auth'].hostUrl, config.webPort ].join('');
-//
-//            var link = hosturl + '/' + obj.action + '?u=' + obj.user.id + '&t=' + obj.hash + '&n=' + encodeURIComponent( obj.user.fullName );
+            return new Promise( function( resolve, reject ) {
+                reject( 'Mail not implemented yet' );
 
-
-            // var payload = { to: obj.user.email, from: 'no-reply@CleverTech.biz' };
-
-            // payload.text = (obj.action === 'account_confirm')
-            //     ? "Please click on the link below to activate your account\n " + link
-            //     : "Please click on the link below to enter a new password\n " + link;
-
-            // var info = { link: link, companyLogo: 'http://app.CleverTech.biz/images/logo.png', companyName: 'CleverTech' };
-
-            // info.tplName = (obj.action === 'account_confirm')
-            //     ? 'userNew'
-            //     : 'passwordRecovery';
-
-            // if ( !obj.tplData ) {
-            //     payload.subject = 'CleverTech: ' + obj.mailsubject;
-
-            //     info.firstname = obj.user.firstname;
-            //     info.username = obj.user.username;
-            //     info.user = obj.user;
-            //     info.tplTitle = 'CleverTech: Password Recovery';
-
-            // } else {
-            //     payload.subject = obj.tplData.subject;
-
-            //     info.tplTitle = obj.tplData.tplTitle;
-            //     info.firstName = obj.tplData.firstName;
-            //     info.accountSubdomain = obj.tplData.accountSubdomain;
-            //     info.userFirstName = obj.tplData.userFirstName;
-            //     info.userEmail = obj.tplData.userEmail;
-            // }
-
-            return Q.resolve( 'Init Promise Chaining' )
-                .then( function () {
-                    return { statuscode: 200, message: 'Message successfully sent' };
-                } )
                 // .then( function() {
                 //     return bakeTemplate( info );
                 // } )
@@ -197,13 +195,10 @@ module.exports = function( Service, UserModel ) {
                 // .then( function () {
                 //     return { statuscode: 200, message: 'Message successfully sent' };
                 // } )
-                .fail( function ( err ) {
-                    console.log( "\n\nERRR: ", err );
-                    return { statuscode: 500, message: err };
-                } );
+            });
         },
 
-        resendAccountConfirmation: function( userId, tplData ) {
+        sendConfirmationEmail: function( userId ) {
             var service = this;
             
             return new Promise( function( resolve, reject ) {
@@ -234,7 +229,6 @@ module.exports = function( Service, UserModel ) {
                     })
                     .catch( resolve );
             });
-
         }
 
     });

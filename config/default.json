@@ -33,6 +33,6 @@
 
         "hostUrl": "http://localhost:8080",
 
-        "email_confirmation": false
+        "emailConfirmation": false
     }
 }

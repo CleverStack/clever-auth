@@ -1,64 +1,64 @@
-module.exports = function ( Model, config ) {
+module.exports = function( Model, config ) {
     return Model.extend( 'User',
     {
-        type: config['clever-auth'].driver,
-        softDeletable: true,
-        timeStampable: true
+        type:               config[ 'clever-auth' ].driver || 'ORM',
+        softDeletable:      true,
+        timeStampable:      true
     },
     {
         id: {
-            type: Number,
-            primaryKey: true,
-            autoIncrement: true
+            type:           Number,
+            primaryKey:     true,
+            autoIncrement:  true
         },
         googleIdentifier: {
-            type: String,
-            allowNull: true
+            type:           String,
+            allowNull:      true
         },
         title: {
-            type: String
+            type:           String
         },
         username: {
-            type: String,
-            unique: true,
-            required: true
+            type:           String,
+            unique:         true,
+            required:       true
         },
         email: {
-            type: String,
-            unique: true,
-            required: true,
+            type:           String,
+            unique:         true,
+            required:       true,
             validate: {
-                isEmail: true
+                isEmail:    true
             }
         },
         password: {
-            type: String
+            type:           String
         },
         firstname: {
-            type: String,
-            allowNull: true
+            type:           String,
+            allowNull:      true
         },
         lastname: {
-            type: String,
-            allowNull: true
+            type:           String,
+            allowNull:      true
         },
         phone: {
-            type: String,
-            allowNull: true
+            type:           String,
+            allowNull:      true
         },
         confirmed: {
-            type: Boolean,
-            default: false
+            type:           Boolean,
+            default:        false
         },
         active: {
-            type: Boolean,
-            default: true
+            type:           Boolean,
+            default:        true
         },
         hasAdminRight: {
-            type: Boolean,
-            default: false
+            type:           Boolean,
+            default:        false
         },
-        accessedAt: Date,
+        accessedAt:         Date,
 
         getters: {
             fullName: function() {

@@ -2,20 +2,14 @@ var crypto          = require( 'crypto' )
   , injector        = require( 'injector' )
   , LocalStrategy   = require( 'passport-local' ).Strategy;
 
-module.exports = function( Controller, UserService, config, passport ) {
+module.exports = function( config, Controller, Exceptions, passport, UserService ) {
     injector.instance( 'LocalStrategy', LocalStrategy );
 
     var AuthController = Controller.extend({
 
         restfulRouting: false,
 
-        route: [
-            '/auth/?:action((?!(user|users|google)).)*/?'
-        ],
-
-        autoRouting: [
-            //@TODO hookup requiresSignIn or requiresPermission
-        ],
+        route: '/auth/?:action?',
 
         localAuth: function( username, password, done ) {
             var credentials = {
@@ -83,6 +77,17 @@ module.exports = function( Controller, UserService, config, passport ) {
         },
 
         signInAction: function () {
+            var username = this.req.body.username || this.req.query.username || false,
+                password = this.req.body.password || this.req.query.password || false;
+
+            if ( !username ) {
+                return this.handleServiceMessage( new Exceptions.InvalidLoginCredentials( 'Invalid Username or Email' ) );
+            }
+
+            if ( !password ) {
+                return this.handleServiceMessage( new Exceptions.InvalidLoginCredentials( 'Invalid Password' ) );
+            }
+
             passport.authenticate( 'local', this.proxy( AuthController.authenticate ) )( this.req, this.res, this.next );
         },
 

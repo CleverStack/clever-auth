@@ -1,6 +1,7 @@
-var crypto = require( 'crypto' );
+var crypto          = require( 'crypto' )
+  , async           = require( 'async' );
 
-module.exports = function( Controller, UserService, Exceptions, config, passport, async ) {
+module.exports = function( config, Controller, passport, UserService ) {
     var UserController = Controller.extend({
         
         /**
@@ -9,12 +10,7 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
          */
         service: UserService,
 
-        /**
-         * Provide the routes that this Controller is accessible from
-         * @type {Array}
-         */
         route: [
-            '[POST] /auth/user/?',
             '/auth/user/:id/?',
             '/auth/user/:id/:action/?',
             '/auth/users/?',
@@ -86,24 +82,12 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
             return function( req, res, next ) {
                 var method          = req.method.toLowerCase()
                   , action          = req.params.action ? req.params.action.toLowerCase() : false
-                  , id              = req.params.id
                   , requiresLogin   = false;
 
-                if ( !!id && !!action && action === 'list' ) {
-                    action = 'get'
-                    req.params.action = 'get';
-                } else if ( !action && method === 'get' && /^\/.*\/(.*\/?)$/ig.test( req.url ) ) {
+                if ( !action && method === 'get' && /^\/[^\/]+\/?$/ig.test( req.url ) ) {
                     action = 'list';
                 } else if ( /^[0-9a-fA-F]{24}$/.test( action ) || !isNaN( action ) ) {
                     action = 'get';
-                } else {
-                    if ( req.params.action ) {
-                        action = req.params.action;
-                    } else if ( method === 'get' && !id ) {
-                        action = 'list';
-                    } else {
-                        action = method;
-                    }
                 }
 
                 async.waterfall(
@@ -173,25 +157,13 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
 
             return function( req, res, next ) {
                 var method          = req.method.toLowerCase()
-                  , action          = req.params.action ? req.params.action.toLowerCase() : false
-                  , id              = req.params.id
+                  , action          = req.params.action
                   , requiresLogin   = false;
 
-                if ( !!id && !!action && action === 'list' ) {
-                    action = 'get'
-                    req.params.action = 'get';
-                } else if ( !action && method === 'get' && /^\/.*\/(.*\/?)$/ig.test( req.url ) ) {
+                if ( !action && method === 'get' && /^\/[^\/]+\/?$/ig.test( req.url ) ) {
                     action = 'list';
                 } else if ( /^[0-9a-fA-F]{24}$/.test( action ) || !isNaN( action ) ) {
                     action = 'get';
-                } else {
-                    if ( req.params.action ) {
-                        action = req.params.action;
-                    } else if ( method === 'get' && !id ) {
-                        action = 'list';
-                    } else {
-                        action = method;
-                    }
                 }
 
                 async.waterfall(
@@ -236,7 +208,7 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
 
                 );
             }
-        }, // @TODO this doesn't work?
+        },
         
         /**
          * Middleware that can be used on any single route to check that password recovery data has been provided
@@ -264,16 +236,49 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
             }
 
             next();
-        } // @TODO is this actually needed? i doubt it
+        }
     },
     {
         /**
-         * Handles POST /auth/user or POST /auth/users, this function will use the UserService to create a new User.
+         * Responds to GET /user/1 or /user/action, we override this method so we can redirect to the
+         * listAction if no id has been provided
+         * 
+         * @return {undefined}
+         */
+        listAction: function () {
+            if ( !this.req.params.id ) {
+                if ( !this.req.user.hasAdminRight ) {
+                    this.req.query.AccountId = this.req.user.account.id;
+                }
+                this._super.apply( this, arguments );
+            } else {
+                this.getAction();
+            }
+        },
+
+        /**
+         * Responds to GET /user/1 or /user/action, we override this method so we can redirect to the
+         * listAction if no id has been provided
+         * 
+         * @return {undefined}
+         */
+        getAction: function () {
+            if ( !!this.req.params.id ) {
+                if ( !this.req.user.hasAdminRight ) {
+                    this.req.query.AccountId = this.req.user.account.id;
+                }
+                this._super.apply( this, arguments );
+            } else {
+                this.listAction();
+            }
+        },
+
+        /**
+         * Handles POST /user or GET/POST /user/post, this function will use the UserService to create a new user
          * @return {undefined}
          */
         postAction: function () {
-            if ( !!this.req.body.id || !!this.req.params.id ) {
-                this.action = 'putAction';
+            if ( !!this.req.body.id ) {
                 if ( !this.req.params.id ) {
                     this.req.params.id = this.req.body.id;
                     delete this.req.body.id;
@@ -281,7 +286,11 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
                 return this.putAction();
             }
 
-            UserService
+            if ( !this.req.user.hasAdminRight ) {
+                this.req.body.AccountId = this.req.user.account.id;
+            }
+
+            return UserService
                 .create( this.req.body )
                 .then( this.proxy( function( user ) {
                     require( 'clever-auth' ).controllers.AuthController.authenticate.apply( this, [ null, user ] );
@@ -290,12 +299,28 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
         },
 
         /**
-         * Handles PUT /auth/user/:id or GET/PUT /auth/user/:id/put, this function will use the UserService to update an existing user
+         * Handles PUT /user or GET/PUT /user/put, this function will use the UserService to update an existing user
          * @return {undefined}
          */
         putAction: function () {
-            UserService
-                .update( this.req.params.id, this.req.body )
+            var options = { where: this.req.query };
+
+            options.where.id = this.req.params.id || this.req.query.id;
+
+            if ( !!options.where._include ) {
+                options.include = options.include || [];
+                options.where._include.split( ',' ).forEach( function( include ) {
+                    options.include.push( models[ include ] );
+                });
+                delete options.where._include;
+            }
+
+            if ( !this.req.user.hasAdminRight ) {
+                options.where.AccountId = this.req.user.account.id;
+            }
+
+            return UserService
+                .update( options, this.req.body )
                 .then( this.proxy( function( user ) {
                     require( 'clever-auth' ).controllers.AuthController.updateSession.apply( this, [ user ] );
                 }))
@@ -303,12 +328,28 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
         },
 
         /**
-         * Handles DELETE /auth/user/:id or GET/DELETE /auth/user/:id/delete, this function will use the UserService to delete an existing user
+         * Handles DELETE /user or GET/DELETE /user/delete, this function will use the UserService to delete an existing user
          * @return {undefined}
          */
         deleteAction: function() {
+            var options = { where: this.req.query };
+
+            options.where.id = this.req.params.id || this.req.query.id;
+
+            if ( !!options.where._include ) {
+                options.include = options.include || [];
+                options.where._include.split( ',' ).forEach( function( include ) {
+                    options.include.push( models[ include ] );
+                });
+                delete options.where._include;
+            }
+
+            if ( !this.req.user.hasAdminRight ) {
+                this.req.query.AccountId = this.req.user.account.id;
+            }
+
             UserService
-                .destroy( this.req.params.id, this.req.body )
+                .destroy( options, this.req.body )
                 .then( this.proxy( function() {
                     if ( this.req.params.id === this.req.user.id ) {
                         require( 'clever-auth' ).controllers.AuthController.signOut.apply( this, arguments );
@@ -319,34 +360,42 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
                 .catch( this.proxy( 'handleException' ) );
         },
 
-        /**
-         * Allows a user to request a password recovery (reset) email be sent to them
-         * @return {undefined}
-         */
         recoverAction: function() {
             if ( !this.req.body.email ) {
-                throw new Exceptions.InvalidData( 'You must provide your Email Address.' );
+                this.send( { message: 'missing email', statusCode: 400 }, 400 );
+                return;
             }
 
             UserService
-                .recoverPassword( this.req.body.email )
-                .then( this.proxy( 'handlePasswordRecovery' ) )
-                .catch( this.proxy( 'handleException' ) );
+                .find( { where: { email: this.req.body.email } } )
+                .then( function( user ) {
+                    return UserService.generatePasswordResetHash( user );
+                })
+                .then( function( recoveryData ) {
+                    return UserService.mailPasswordRecoveryToken( recoveryData );
+                })
+                .then( this.proxy( 'handleServiceMessage' ) )
+                .catch( this.proxy( 'handleServiceMessage' ) );
         },
 
-        /**
-         * Allows users to post their recoveryToken to reset their password
-         * @return {undefined}
-         */
         resetAction: function() {
-            var userId    = this.req.body.id || this.req.body.user,
-                password  = this.req.body.password,
-                token     = this.req.body.token;
+            var userId = this.req.body.userId || this.req.body.user,
+                password = this.req.body.password,
+                token = this.req.body.token;
 
             UserService
                 .findById( userId )
-                .then( this.proxy( 'handlePasswordReset', password, token ) )
-                .catch( this.proxy( 'handleException' ) );
+                .then( function( user ) {
+                    return UserService.generatePasswordResetHash( user );
+                })
+                .then( function( resetData ) {
+                    if ( token != resetData.hash ) {
+                        return this.send( 'Invalid token', 400 );
+                    }
+
+                    this.handleUpdatePassword( newPassword, [user] );
+                })
+                .catch( this.proxy( 'handleServiceMessage' ) );
 
         },
 
@@ -364,17 +413,7 @@ module.exports = function( Controller, UserService, Exceptions, config, passport
         },
 
         verifyResetTokenValidity: function( user, newPassword, token, resetData ) {
-            if ( !resetData.hash && resetData.statuscode ) {
-                this.handleServiceMessage( resetData );
-                return;
-            }
-
-            var hash = resetData.hash;
-            if ( token != hash ) {
-                return this.send( 'Invalid token', 400 );
-            }
-
-            this.handleUpdatePassword( newPassword, [user] );
+            
 
         },
 

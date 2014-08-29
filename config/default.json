@@ -28,11 +28,29 @@
 
         "requiresLogin": {
             "all": true,
-            "postAction": false
+            "postAction": false,
+            "recoverAction": false
         },
 
-        "hostUrl": "http://localhost:8080",
+        "hostUrl": "http://localhost",
 
-        "emailConfirmation": false
+        "email_confirmation": false,
+
+        "email": {
+          "driver": ""
+        },
+
+        "modelAssociations": {
+            "Account": {
+                "hasMany": [
+                    "User"
+                ]
+            },
+            "User": {
+                "belongsTo": [
+                    "Account"
+                ]
+            }
+        }
     }
 }

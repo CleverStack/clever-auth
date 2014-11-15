@@ -49,7 +49,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
 
     function fakeRequest( req ) {
         req.method  = req.method || 'GET';
-        req.url     = req.url || '/user';
+        req.url     = req.url || '/auth/user';
         req.query   = req.query || {};
         req.body    = req.body || {};
         req.params  = req.params || {};
@@ -76,7 +76,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
     describe( 'Class.loginRequired() middleware', function() {
         it( 'should call next if req.isAuthenticated() returns true', function ( done ) {
             var req = fakeRequest({
-                    url: '/user',
+                    url: '/auth/user',
                     params: {
                         action: 'get'
                     },
@@ -94,7 +94,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
 
         it( 'should send 401 if req.isAuthenticated() returns false', function ( done ) {
             var req = fakeRequest({
-                    url: '/user',
+                    url: '/auth/user',
                     params: {
                         action: 'get'
                     },
@@ -199,16 +199,17 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     password: 'secret_password'
                 }
               , req = fakeRequest({
-                    url: '/user',
+                    url: '/auth/user',
                     body: data,
                     method: 'POST',
                     params: {
                         action: 'post'
                     },
+                    user: { hasAdminRights: false, account: {} },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
-                    isAuthenticated: function () { return false; }
+                    isAuthenticated: function () { return true; }
                 })
               , res = fakeResponse(function( statusCode, user ) {
                     expect( statusCode ).to.equal( 200 );
@@ -247,16 +248,17 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     password: 'secret_password'
                 }
               , req = fakeRequest({
-                    url: '/user',
+                    url: '/auth/user',
                     body: data,
                     method: 'POST',
                     params: {
                         action: 'post'
                     },
+                    user: { hasAdminRights: false, account: {} },
                     login: function( user, fn ) {
-                        fn( !!user && !!user.id ? null : user );
+                        fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
-                    isAuthenticated: function () { return false; }
+                    isAuthenticated: function () { return true; }
                 })
               , res = fakeResponse(function( status, response ) {
                     expect( status ).to.equal( 400 );
@@ -276,16 +278,17 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     password: 'secret_password'
                 }
               , req = fakeRequest({
-                    url: '/user',
+                    url: '/auth/user',
                     body: data,
                     method: 'POST',
                     params: {
                         action: 'post'
                     },
+                    user: { hasAdminRights: false, account: { id: 1 } },
                     login: function( user, fn ) {
-                        fn( !!user && !!user.id ? null : user );
+                        fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
-                    isAuthenticated: function () { return false; }
+                    isAuthenticated: function () { return true; }
                 })
               , res = fakeResponse(function( status, response ) {
                     expect( status ).to.equal( 400 );
@@ -308,7 +311,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     firstName: 'cdxsasdf',
                     username: 'xcxcxc@example.com',
                     email: 'sasasas@example.com',
-                    password: 'secret_password'
+                    password: 'secret_password',
+                    AccountId: 1
                 })
                 .then( function ( user ) {
                     expect( user ).to.be.an( 'object' );
@@ -327,20 +331,22 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     firstname: 'petrushka'
                 }
               , req = fakeRequest({
-                    url: '/user/' + new_user.id,
+                    url: '/auth/user/' + new_user.id,
                     body: data,
                     method: 'PUT',
+                    query: {},
                     params: {
                         action: 'put',
                         id: new_user.id
                     },
-                    user: { id: new_user.id },
+                    user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
-                    }
+                    },
+                    isAuthenticated: function () { return true; }
                 })
               , res = fakeResponse(function( status, result ) {
-                    
+
                     // Check the result/response
                     expect( status ).to.equal( 200 );
                     expect( result ).to.be.an( 'object' );
@@ -357,7 +363,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     // Check the arguments the UserService was called with
                     var spyCall = spy.getCall ( 0 ).args;
                     expect( spyCall ).to.be.an( 'array' );
-                    expect( spyCall[0] ).to.be.an( 'number' ).and.equal( new_user.id );
+                    expect( spyCall[0] ).to.be.an( 'object' ).and.to.have.property( 'where' ).and.to.have.property( 'id' );
                     expect( spyCall[1] ).to.be.an( 'object' );
                     expect( spyCall[1] ).to.have.property( 'id' ).and.equal( data.id );
                     expect( spyCall[1] ).to.have.property( 'firstname' ).and.equal( data.firstname );
@@ -378,23 +384,24 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     firstname: 'fail'
                 }
               , req = fakeRequest({
-                    url: '/user/',
+                    url: '/auth/user/',
                     body: data,
                     method: 'PUT',
                     params: {
                         action: 'put'
                     },
-                    user: { id: new_user.id },
+                    user: { hasAdminRights: false, account: { id: 1 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
-                    }
+                    },
+                    isAuthenticated: function () { return true; }
                 })
               , res = fakeResponse(function( status, result ) {
 
                     // Check the result/response
                     expect( status ).to.equal( 404 );
                     expect( result ).to.be.an( 'object' );
-                    expect( result ).to.have.property( 'message' ).and.equal( 'Unable to update User, unable to determine identity.' );
+                    expect( result ).to.have.property( 'message' ).and.equal( 'User doesn\'t exist.' );
                     
                     expect( next.called ).to.eql( false );
 
@@ -412,17 +419,19 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     new_password: 'foobar'
                 }
               , req = fakeRequest({
-                    url: '/user/' + new_user.id,
+                    url: '/auth/user/' + new_user.id,
                     body: data,
                     method: 'PUT',
+                    query: {},
                     params: {
                         action: 'put',
                         id: new_user.id
                     },
-                    user: { id: new_user.id },
+                    user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
-                    }
+                    },
+                    isAuthenticated: function () { return true; }
                 })
               , res = fakeResponse(function( status, result ) {
 
@@ -439,9 +448,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     // Check the arguments the UserService was called with
                     var spyCall = spy.getCall ( 0 ).args;
                     expect( spyCall ).to.be.an( 'array' );
-                    expect( spyCall[0] ).to.be.an( 'number' ).and.equal( new_user.id );
+                    expect( spyCall[0] ).to.be.an( 'object' ).and.to.have.property( 'where' ).and.to.have.property( 'id' );
                     expect( spyCall[1] ).to.be.an( 'object' );
-                    expect( spyCall[1] ).to.have.property( 'id' ).and.equal( data.id );
                     expect( spyCall[1] ).to.have.property( 'password' );
                     expect( spyCall[1] ).to.not.have.property( 'new_password' );
 
@@ -464,7 +472,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     firstName: 'listAction',
                     username: 'listAction@example.com',
                     email: 'listAction@example.com',
-                    password: 'secret_password'
+                    password: 'secret_password',
+                    AccountId: 1
                 })
                 .then( function ( user ) {
                     expect( user ).to.be.an( 'object' );
@@ -481,7 +490,14 @@ describe( 'CleverAuth.Controller.UserController', function () {
             var ctrl = null;
 
             var req = fakeRequest({
-                method: 'GET'
+                method: 'GET',
+                query: {},
+                params: {},
+                user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
+                login: function( user, fn ) {
+                    fn( !!user && !!user.id ? null : 'Unknown error' );
+                },
+                isAuthenticated: function () { return true; }
             });
 
             var res = fakeResponse( function( code, result ) {
@@ -511,7 +527,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     firstName: 'getAction',
                     username: 'getAction@example.com',
                     email: 'getAction@example.com',
-                    password: 'secret_password'
+                    password: 'secret_password',
+                    AccountId: 1
                 })
                 .then( function ( user ) {
                     expect( user ).to.be.an( 'object' );
@@ -529,10 +546,15 @@ describe( 'CleverAuth.Controller.UserController', function () {
 
             var req = fakeRequest({
                 method: 'GET',
-                url: '/user/' + new_user.id,
+                url: '/auth/user/' + new_user.id,
                 params: {
                     id: new_user.id
-                }
+                },
+                user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
+                login: function( user, fn ) {
+                    fn( !!user && !!user.id ? null : 'Unknown error' );
+                },
+                isAuthenticated: function () { return true; }
             });
 
             var res = fakeResponse( function( code, result ) {

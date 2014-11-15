@@ -2,20 +2,16 @@ var crypto          = require( 'crypto' )
   , injector        = require( 'injector' )
   , LocalStrategy   = require( 'passport-local' ).Strategy;
 
-module.exports = function( Controller, UserService, config, passport ) {
+module.exports = function( config, Controller, passport, UserService ) {
     injector.instance( 'LocalStrategy', LocalStrategy );
 
     var AuthController = Controller.extend({
 
-        restfulRouting: false,
-
         route: [
-            '/auth/?:action((?!(user|users|google)).)*/?'
+            '[GET,POST] /auth/?:action?'
         ],
 
-        autoRouting: [
-            //@TODO hookup requiresSignIn or requiresPermission
-        ],
+        restfulRouting: false,
 
         localAuth: function( username, password, done ) {
             var credentials = {
@@ -53,12 +49,23 @@ module.exports = function( Controller, UserService, config, passport ) {
 
         updateSession: function( user ) {
             if ( user.id && ( this.req.user.id === user.id ) ) {
-                this.req.user = user;
-                this.send( user, 200 );
+                AuthController.authenticate.apply( this, [ null, user ] );
                 return;
             }
 
             this.send( user, 400 );
+        },
+
+        requiresAdmin: function( req, res, next ) {
+            if ( req.isAuthenticated() ) {
+                if ( !!req.user.hasAdminRight ) {
+                    next();
+                } else {
+                    res.send( 403, { message: 'User is not authorized to perform that action' } );
+                }
+            } else {
+                res.send( 401, { message: 'User is not authenticated' } );
+            }
         }
     },
     {

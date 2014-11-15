@@ -68,6 +68,38 @@ module.exports = Module.extend({
         this.emit( 'appReady' );
     },
 
+    preRoute: function( UserModel, AccountModel, SubscriptionModel, PlanModel, PlanLimitModel ) {
+        UserModel.on( 'preQuery', function( options ) {
+            var nestedInclude = {
+                model   : AccountModel._model,
+                include: [
+                    {
+                        model   : SubscriptionModel._model,
+                        as      : 'subscription',
+                        include: [
+                            {
+                                model   : PlanModel._model,
+                                include: [
+                                    {
+                                        model   : PlanLimitModel._model,
+                                        as      : 'limits'
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            if ( typeof options.include === 'undefined' ) {
+                options.include = [];
+            }
+            if ( options.include.indexOf( nestedInclude ) === -1 ) {
+                options.include.push( nestedInclude );
+            }
+        });
+    },
+
     preShutdown: function () {
         this.debug( 'Closing session store connection...' );
         this.sessionStore.client.quit();

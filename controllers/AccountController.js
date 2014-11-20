@@ -1,4 +1,18 @@
-module.exports = function( Controller, AccountService, PermissionController, config, async ) {
+var injector    = require( 'injector' )
+  , packageJson = injector.getInstance( 'packageJson' );
+
+module.exports  = function( Controller, AccountService, config, async ) {
+    var autoRouting = [];
+
+    if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) ) {
+        autoRouting.push(
+            injector.getInstance( 'PermissionController' ).requiresPermission({
+                all: 'Account.$action',
+                postAction: null
+            })
+        );
+    }
+
     var AccountController = Controller.extend(
     /** @Class **/
     {
@@ -12,14 +26,7 @@ module.exports = function( Controller, AccountService, PermissionController, con
             '/accounts/:action/?'
         ],
 
-        autoRouting: [
-
-            PermissionController.requiresPermission({
-                all: 'Account.$action',
-                postAction: null
-            })
-
-        ],
+        autoRouting: autoRouting,
 
         /**
          * Middleware helper function to format data in POST or PUT requests

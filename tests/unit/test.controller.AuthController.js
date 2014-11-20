@@ -12,14 +12,16 @@ describe( 'CleverAuth.Controller.AuthController', function () {
     before( function( done ) {
         authModule      = injector.getInstance( 'cleverAuth' );
         Controller      = authModule.controllers.AuthController;
-        Service         = authModule.services.UserService;
+        Service         = injector.getInstance( 'AccountService' );
 
         Service
             .create({
                 firstName: 'authControllerUser',
                 username: 'authControllerUser@example.com',
                 email: 'authControllerUser@example.com',
-                password: 'secret_password'
+                password: 'secret_password',
+                confirmed:  true,
+                subDomain: 'authControllerUser'
             })
             .then( function( user ) {
                 expect( user ).to.be.an( 'object' );

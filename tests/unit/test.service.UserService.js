@@ -37,12 +37,14 @@ describe( 'CleverAuth.Service.UserService', function () {
         var joesData = {
             username:   'Joe',
             email:      'joe@cleverAuth.com',
-            password:   '1234'
+            password:   '1234',
+            confirmed:  true
         };
         var rachelsData = {
             username:   'Rachel',
             email:      'rachel@cleverAuth.com',
-            password:   '1234'
+            password:   '1234',
+            confirmed:  true
         };
 
         it( 'should return a User with specified credentials', function( done ) {
@@ -93,7 +95,8 @@ describe( 'CleverAuth.Service.UserService', function () {
                 username:   'joeInactive@example.com',
                 email:      'joeInactive@example.com',
                 password:   '1234',
-                active:     false
+                active:     false,
+                confirmed:  true
             };
 
             UserService
@@ -124,7 +127,8 @@ describe( 'CleverAuth.Service.UserService', function () {
             var data = {
                 username:   'noduplicates@example.com',
                 email:      'noduplicates@example.com',
-                password:   '1234'
+                password:   '1234',
+                confirmed:  true
             };
 
             UserService
@@ -155,7 +159,8 @@ describe( 'CleverAuth.Service.UserService', function () {
             var data = {
                 username:   'newUser@cleverAuth.com',
                 email:      'newUser@cleverAuth.com',
-                password:   '1234'
+                password:   '1234',
+                confirmed:  true
             };
 
             UserService
@@ -177,7 +182,8 @@ describe( 'CleverAuth.Service.UserService', function () {
 
             var data = {
                 username:   'autoGeneratePassword@cleverAuth.com',
-                email:      'autoGeneratePassword@cleverAuth.com'
+                email:      'autoGeneratePassword@cleverAuth.com',
+                confirmed:  true
             };
 
             UserService
@@ -201,7 +207,8 @@ describe( 'CleverAuth.Service.UserService', function () {
             var data = {
                 username: 'Rachel21',
                 email: 'rachel21@example.com',
-                password: '1234'
+                password: '1234',
+                confirmed:  true
             };
 
             UserService
@@ -222,7 +229,7 @@ describe( 'CleverAuth.Service.UserService', function () {
                     }
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should call .mailPasswordRecoveryToken method if EmailService exist and do not call otherwise', function ( done ) {
@@ -232,7 +239,8 @@ describe( 'CleverAuth.Service.UserService', function () {
             var data = {
                 username: 'Rachel22',
                 email: 'rachel22@example.com',
-                password: '1234'
+                password: '1234',
+                confirmed:  true
             };
 
             UserService
@@ -253,7 +261,7 @@ describe( 'CleverAuth.Service.UserService', function () {
                     }
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         }); 
     });
 
@@ -264,7 +272,8 @@ describe( 'CleverAuth.Service.UserService', function () {
             var data = {
                 username:   'hashPassword@cleverAuth.com',
                 email:      'hashPassword@cleverAuth.com',
-                password:   '1234'
+                password:   '1234',
+                confirmed:  true
             };
             var originalPassword = null;
 
@@ -340,7 +349,7 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should return data for password recovery', function ( done ) {
@@ -384,14 +393,15 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should return status 403 and message when user missing fields', function ( done ) {
             var data = {
                 username: 'Rachel13',
                 email: 'rachel13@example.com',
-                password: '1234'
+                password: '1234',
+                confirmed:  true
             };
 
             UserService
@@ -404,7 +414,7 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
     });
 
@@ -434,7 +444,7 @@ describe( 'CleverAuth.Service.UserService', function () {
                     result.should.have.property( 'message' );
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should return status 200 and a message for password recovery action ', function ( done ) {
@@ -453,7 +463,7 @@ describe( 'CleverAuth.Service.UserService', function () {
                     result.should.have.property( 'message' );
                     done();
                 })
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should return status 500 and a message for unrecognized action ', function ( done ) {
@@ -472,7 +482,7 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
     });
 
@@ -516,7 +526,7 @@ describe( 'CleverAuth.Service.UserService', function () {
                     data.should.have.property( 'message' ).and.not.be.empty;
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should return status code 403 and message when account has been confirmed', function ( done ) {
@@ -543,7 +553,7 @@ describe( 'CleverAuth.Service.UserService', function () {
                     data.should.have.property( 'message' ).and.not.be.empty;
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should call .generatePasswordResetHash method ', function ( done ) {
@@ -579,7 +589,7 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should call .mailPasswordRecoveryToken method ', function ( done ) {
@@ -615,7 +625,7 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
 
         it.skip( 'should return statuscode 200 and a message', function ( done ) {
@@ -644,7 +654,7 @@ describe( 'CleverAuth.Service.UserService', function () {
 
                     done();
                 } )
-                .fail( done );
+                .catch( done );
         });
     });
 });

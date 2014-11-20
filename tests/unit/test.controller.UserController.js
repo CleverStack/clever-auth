@@ -4,6 +4,7 @@ var expect      = require( 'chai' ).expect
   , authModule
   , Controller
   , Service
+  , UserService = null
   , users = []
   , new_user;
 
@@ -12,14 +13,17 @@ describe( 'CleverAuth.Controller.UserController', function () {
     before( function( done ) {
         authModule      = injector.getInstance( 'cleverAuth' );
         Controller      = authModule.controllers.UserController;
-        Service         = Controller.service;
+        Service         = injector.getInstance( 'AccountService' );
+        UserService     = injector.getInstance( 'UserService' );
 
         Service
             .create({
                 firstName: 'Joeqwer',
                 username: 'joe@example.com',
                 email: 'joe@example.com',
-                password: '7110eda4d09e062aa5e4a390b0a572ac0d2c0220'
+                password: '7110eda4d09e062aa5e4a390b0a572ac0d2c0220',
+                confirmed:  true,
+                subDomain: 'joe'
             })
             .then( function ( user ) {
 
@@ -32,7 +36,9 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     firstName: 'Racheller',
                     username: 'rachel@example.com',
                     email: 'rachel@example.com',
-                    password: '7110eda4d09e062aa5e4a390b0a572ac0d2c0220'
+                    password: '7110eda4d09e062aa5e4a390b0a572ac0d2c0220',
+                    confirmed:  true,
+                    subDomain: 'rachel'
                 });
             })
             .then( function ( user ) {
@@ -194,12 +200,16 @@ describe( 'CleverAuth.Controller.UserController', function () {
     describe( 'postAction()', function () {
         it( 'should hash password and save user', function ( done ) {
             var data = {
+                    firstName: 'admin',
                     username: 'admin',
                     email: 'admin@example.com',
-                    password: 'secret_password'
+                    password: 'secret_password',
+                    confirmed:  true,
+                    subDomain: 'admin',
+                    active: true
                 }
               , req = fakeRequest({
-                    url: '/auth/user',
+                    url: '/account',
                     body: data,
                     method: 'POST',
                     params: {
@@ -217,9 +227,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     expect( user ).to.be.an( 'object' );
                     expect( user ).to.have.property( 'id' );
 
-                    Service.findAll( { where: { email: data.email } } )
+                    UserService.findAll( { where: { email: data.email } } )
                         .then( function ( users ) {
-
                             expect( users ).to.be.an( 'array' ).and.have.length( 1 );
 
                             user = users[0];
@@ -238,17 +247,19 @@ describe( 'CleverAuth.Controller.UserController', function () {
               , next = sinon.spy()
               , ctrl = null;
 
-            ctrl = Controller.callback( 'newInstance' )( req, res, next );
+            ctrl = injector.getInstance( 'AccountController' ).callback( 'newInstance' )( req, res, next );
         });
 
         it( 'should get an error if trying to create a user where email already exists in the database', function ( done ) {
             var data = {
                     username: 'admin',
                     email: users[0].email,
-                    password: 'secret_password'
+                    password: 'secret_password',
+                    confirmed:  true,
+                    subDomain: 'userControllerUser'
                 }
               , req = fakeRequest({
-                    url: '/auth/user',
+                    url: '/account',
                     body: data,
                     method: 'POST',
                     params: {
@@ -284,7 +295,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     params: {
                         action: 'post'
                     },
-                    user: { hasAdminRights: false, account: { id: 1 } },
+                    user: { hasAdminRights: false, account: { id: 4 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
@@ -312,7 +323,9 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     username: 'xcxcxc@example.com',
                     email: 'sasasas@example.com',
                     password: 'secret_password',
-                    AccountId: 1
+                    AccountId: 1,
+                    confirmed:  true,
+                    subDomain: 'cdxsasdf'
                 })
                 .then( function ( user ) {
                     expect( user ).to.be.an( 'object' );
@@ -339,7 +352,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                         action: 'put',
                         id: new_user.id
                     },
-                    user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
+                    user: { id: new_user.id, hasAdminRights: true, account: { id: 4 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
@@ -373,7 +386,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     done();
                 })
               , next = sinon.spy()
-              , spy  = sinon.spy( Service, 'update' )
+              , spy  = sinon.spy( UserService, 'update' )
               , ctrl = null;
 
             ctrl = Controller.callback( 'newInstance' )( req, res, next );
@@ -390,7 +403,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     params: {
                         action: 'put'
                     },
-                    user: { hasAdminRights: false, account: { id: 1 } },
+                    user: { hasAdminRights: false, account: { id: 4 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
@@ -427,7 +440,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                         action: 'put',
                         id: new_user.id
                     },
-                    user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
+                    user: { id: new_user.id, hasAdminRights: true, account: { id: 4 } },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
                     },
@@ -458,7 +471,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     done();
                 })
               , next = sinon.spy()
-              , spy  = sinon.spy( Service, 'update' )
+              , spy  = sinon.spy( UserService, 'update' )
               , ctrl = null;
 
             ctrl = Controller.callback( 'newInstance' )( req, res, next );
@@ -473,7 +486,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     username: 'listAction@example.com',
                     email: 'listAction@example.com',
                     password: 'secret_password',
-                    AccountId: 1
+                    subDomain: 'listAction',
+                    confirmed: true
                 })
                 .then( function ( user ) {
                     expect( user ).to.be.an( 'object' );
@@ -487,13 +501,14 @@ describe( 'CleverAuth.Controller.UserController', function () {
         });
 
         it( 'Should send all existing users as an array', function( done ) {
-            var ctrl = null;
+            var ctrl        = null
+              , lastJson    = JSON.parse( JSON.stringify( new_user ) );
 
             var req = fakeRequest({
                 method: 'GET',
                 query: {},
                 params: {},
-                user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
+                user: { id: new_user.id, hasAdminRights: true, account: { id: 5 } },
                 login: function( user, fn ) {
                     fn( !!user && !!user.id ? null : 'Unknown error' );
                 },
@@ -503,8 +518,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
             var res = fakeResponse( function( code, result ) {
                 expect( code ).to.equal( 200 );
 
-                var modelJson = JSON.parse( JSON.stringify( result[ result.length - 1 ] ) )
-                  , lastJson  = JSON.parse( JSON.stringify( new_user ) );
+                var modelJson = JSON.parse( JSON.stringify( result[ result.length - 1 ] ) );
 
                 Object.keys( lastJson ).forEach( function( key ) {
                     expect( modelJson[ key ] ).to.eql( lastJson[ key ] );
@@ -528,7 +542,8 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     username: 'getAction@example.com',
                     email: 'getAction@example.com',
                     password: 'secret_password',
-                    AccountId: 1
+                    subDomain: 'getAction',
+                    confirmed: true
                 })
                 .then( function ( user ) {
                     expect( user ).to.be.an( 'object' );
@@ -542,15 +557,16 @@ describe( 'CleverAuth.Controller.UserController', function () {
         });
 
         it( 'Should be able to get a user by id', function( done ) {
-            var ctrl = null;
+            var ctrl        = null
+              , lastJson    = JSON.parse( JSON.stringify( new_user ) );
 
-            var req = fakeRequest({
+            var req         = fakeRequest({
                 method: 'GET',
                 url: '/auth/user/' + new_user.id,
                 params: {
                     id: new_user.id
                 },
-                user: { id: new_user.id, hasAdminRights: true, account: { id: 1 } },
+                user: { id: new_user.id, hasAdminRights: true, account: { id: 6 } },
                 login: function( user, fn ) {
                     fn( !!user && !!user.id ? null : 'Unknown error' );
                 },
@@ -560,8 +576,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
             var res = fakeResponse( function( code, result ) {
                 expect( code ).to.equal( 200 );
 
-                var modelJson = JSON.parse( JSON.stringify( result ) )
-                  , lastJson  = JSON.parse( JSON.stringify( new_user ) );
+                var modelJson = JSON.parse( JSON.stringify( result ) );
 
                 Object.keys( lastJson ).forEach( function( key ) {
                     expect( modelJson[ key ] ).to.eql( lastJson[ key ] );

@@ -412,7 +412,7 @@ module.exports = function( config, Controller, Promise, passport, UserService, A
                 user = user[0];
                 user.updateAttributes( {
                     password: crypto.createHash( 'sha1' ).update( newPassword ).digest( 'hex' )
-                } ).success( function ( user ) {
+                } ).then( function ( user ) {
                         this.send( {status: 200, results: user} );
                     }.bind( this )
                     ).catch( this.proxy( 'handleException' ) );

@@ -161,7 +161,7 @@ module.exports = function( Service, UserModel, Exceptions ) {
             return new Promise( function( resolve, reject ) {
                 UserModel
                     .find( userId )
-                    .success( function ( user ) {
+                    .then( function ( user ) {
 
                         if ( !user ) {
                             resolve( { statuscode: 403, message: "User doesn't exist" } );

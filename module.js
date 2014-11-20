@@ -68,27 +68,10 @@ module.exports = Module.extend({
         this.emit( 'appReady' );
     },
 
-    preRoute: function( UserModel, AccountModel, SubscriptionModel, PlanModel, PlanLimitModel ) {
+    preRoute: function( UserModel, AccountModel ) {
         UserModel.on( 'preQuery', function( options ) {
             var nestedInclude = {
-                model   : AccountModel._model,
-                include: [
-                    {
-                        model   : SubscriptionModel._model,
-                        as      : 'subscription',
-                        include: [
-                            {
-                                model   : PlanModel._model,
-                                include: [
-                                    {
-                                        model   : PlanLimitModel._model,
-                                        as      : 'limits'
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
+                model   : AccountModel._model
             };
 
             if ( typeof options.include === 'undefined' ) {

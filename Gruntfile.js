@@ -189,7 +189,7 @@ module.exports = function( grunt ) {
                             config: 'cleverauth.username',
                             type: 'input',
                             message: 'Default Username',
-                            default: 'test',
+                            default: 'default',
                         },
                         {
                             type: 'confirm',
@@ -222,7 +222,7 @@ module.exports = function( grunt ) {
                             config: 'cleverauth.email',
                             type: 'input',
                             message: 'Default Users Email',
-                            default: 'test@cleverstack.io'
+                            default: 'default@cleverstack.io'
                         },
                         {
                             type: 'confirm',

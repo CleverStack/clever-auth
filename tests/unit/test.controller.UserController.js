@@ -215,7 +215,7 @@ describe( 'CleverAuth.Controller.UserController', function () {
                     params: {
                         action: 'post'
                     },
-                    user: { hasAdminRights: false, account: {} },
+                    user: { hasAdminRights: false },
                     login: function( user, fn ) {
                         fn( !!user && !!user.id ? null : 'Unknown error' );
                     },

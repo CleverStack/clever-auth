@@ -317,6 +317,7 @@ module.exports = function( grunt ) {
 
             // Remove the user if there is a duplicate
             if ( foundUser !== false ) {
+                conf.associations = seed.UserModel[ foundUser ].associations || {};
                 seed.UserModel.splice( foundUser, 1 );
             }
             delete conf.overwrite;

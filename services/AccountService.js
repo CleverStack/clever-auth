@@ -1,14 +1,17 @@
 var injector                = require( 'injector' )
-  , packageJson             = injector.getInstance( 'packageJson' )
-  , PermissionService       = null
-  , RoleService             = null;
+  , packageJson             = injector.getInstance( 'packageJson' );
 
-module.exports = function( Promise, Service, AccountModel, UserService, sequelize, async, config, _  ) {
+if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) !== -1 ) {
+    module.exports = function( Promise, Service, AccountModel, UserService, sequelize, async, config, _, PermissionService, RoleService ) {
+        return define( Promise, Service, AccountModel, UserService, sequelize, async, config, _, PermissionService, RoleService );
+    };
+} else {
+    module.exports = function( Promise, Service, AccountModel, UserService, sequelize, async, config, _ ) {
+        return define( Promise, Service, AccountModel, UserService, sequelize, async, config, _, null, null );
+    };
+}
 
-    if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) !== -1 ) {
-        PermissionService   = injector.getInstance( 'PermissionService' );
-        RoleService         = injector.getInstance( 'RoleService' );
-    }
+function define( Promise, Service, AccountModel, UserService, sequelize, async, config, _, PermissionService, RoleService ) {
     return Service.extend({
 
         model: AccountModel,

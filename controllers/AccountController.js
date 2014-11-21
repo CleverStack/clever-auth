@@ -1,17 +1,28 @@
 var injector    = require( 'injector' )
   , packageJson = injector.getInstance( 'packageJson' );
 
-module.exports  = function( Controller, AccountService, config, async ) {
+if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) !== -1 ) {
+    module.exports = function( Controller, AccountService, config, async, PermissionController ) {
+        return define( Controller, AccountService, config, async, PermissionController );
+    };
+} else {
+    module.exports = function( Controller, AccountService, config, async ) {
+        return define( Controller, AccountService, config, async, null );
+    };
+}
+
+function define( Controller, AccountService, config, async, PermissionController ) {
     var autoRouting = [];
 
-    if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) !== -1 ) {
+    if ( PermissionController !== null ) {
         autoRouting.push(
-            injector.getInstance( 'PermissionController' ).requiresPermission({
+            PermissionController.requiresPermission({
                 all: 'Account.$action',
                 postAction: null
             })
         );
     }
+
 
     var AccountController = Controller.extend(
     /** @Class **/

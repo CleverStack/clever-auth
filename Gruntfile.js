@@ -198,7 +198,10 @@ module.exports = function( grunt ) {
                             when: function( answers ) {
                                 seed.UserModel.forEach( function( user, i ) {
                                     if ( user.username === answers[ 'cleverauth.username' ] ) {
-                                        foundUser = i;
+                                        if ( foundUser === false ) {
+                                            foundUser = [];
+                                        }
+                                        foundUser.push( i );
                                     }
                                 });
 
@@ -317,8 +320,10 @@ module.exports = function( grunt ) {
 
             // Remove the user if there is a duplicate
             if ( foundUser !== false ) {
-                conf.associations = seed.UserModel[ foundUser ].associations || {};
-                seed.UserModel.splice( foundUser, 1 );
+                foundUser.forEach( function( user ) {
+                    conf.associations = seed.UserModel[ user ].associations || {};
+                    seed.UserModel.splice( user, 1 );
+                });
             }
             delete conf.overwrite;
 
@@ -328,6 +333,7 @@ module.exports = function( grunt ) {
             seed.UserModel.push( conf );
 
             fs.writeFileSync( seedFile, JSON.stringify( seed, null, '  ' ) );
+            fs.writeFileSync( authSeedFile, JSON.stringify( {}, null, '  ' ) );
 
             console.log( 'You should run `clever grunt db clever-auth` to rebase and seed this data in your database...' );
         });

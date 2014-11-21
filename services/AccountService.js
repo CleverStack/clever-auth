@@ -176,8 +176,8 @@ function define( Promise, Service, AccountModel, UserService, sequelize, async, 
                                 hasAdminRight:  false
                             };
 
-                            if ( RoleService !== null ) {
-                                userData.RoleId = role.id;
+                            if ( RoleService !== null && role ) {
+                                userData.RoleId =  role;
                             }
 
                             UserService

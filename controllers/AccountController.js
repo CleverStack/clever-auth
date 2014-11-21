@@ -4,7 +4,7 @@ var injector    = require( 'injector' )
 module.exports  = function( Controller, AccountService, config, async ) {
     var autoRouting = [];
 
-    if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) ) {
+    if ( packageJson.bundledDependencies.indexOf( 'clever-roles' ) !== -1 ) {
         autoRouting.push(
             injector.getInstance( 'PermissionController' ).requiresPermission({
                 all: 'Account.$action',

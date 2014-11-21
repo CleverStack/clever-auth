@@ -32,12 +32,12 @@
   "dependencies": {
     "passport":           "^0.2.0",
     "passport-google":    "~0.3.0",
-    "passport-local":     "~0.1.6",
+    "passport-local":     "~1.0.0",
     "connect":            "^2.13.0",
     "connect-redis":      "~1.4.6",
     "connect-memcached":  "~0.1.0",
-    "redis":              "~0.10.0",
-    "moment":             "~2.5.1"
+    "redis":              "~0.12.1",
+    "moment":             "~2.8.4"
   },
   "devDependencies": {
     "grunt":      "~0.4.2"

@@ -230,9 +230,9 @@ function configureAuthModule() {
 function seedDataForAuthModule() {
     return new Promise( function( resolve, reject ) {
         var objs = [
-                { reg: /Default Username\: \(test\)/, write: '\n', done: false },
+                { reg: /Default Username\: \(default\)/, write: '\n', done: false },
                 { reg: /Default Users Password\: \(clever\)/, write: '\n', done: false },
-                { reg: /Default Users Email\: \(test@cleverstack.io\)/, write: '\n', done: false },
+                { reg: /Default Users Email\: \(default@cleverstack.io\)/, write: '\n', done: false },
                 { reg: /Default Users Firstname\: \(Clever\)/, write: '\n', done: false },
                 { reg: /Default Users Lastname\: \(User\)/, write: '\n', done: false },
                 { reg: /Default Users Phone Number\:/, write: '\n', done: false },

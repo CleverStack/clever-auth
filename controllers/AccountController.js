@@ -170,11 +170,11 @@ function define( Controller, AccountService, config, async, PermissionController
 
                                     if ( method === 'post' || method === 'put' ) {
                                         if ( !isAdmin || ( !!isAdmin && !accountId ) ) {
-                                            req.body.AccountId  = user.Account.id;
+                                            req.body[ user.Account.id ? 'AccountId' : 'Account' ]  = user.Account.id || user.Account._id;
                                         }
                                     } else {
                                         if ( !isAdmin || ( !!isAdmin && !accountId ) ) {
-                                            req.query.AccountId = user.Account.id;
+                                            req.query[ user.Account.id ? 'AccountId' : 'Account' ] = user.Account.id || user.Account._id;
                                         }
                                     }
 

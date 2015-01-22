@@ -1,7 +1,7 @@
 {
   "name":         "clever-auth",
   "description":  "CleverStack Authentication Module",
-  "version":      "1.1.8",
+  "version":      "1.2.0",
   "main":         "module.js",
   "author": {
     "name":       "CleverStack",
@@ -46,5 +46,7 @@
   "scripts": {
     "test":       "grunt test:unit"
   },
-  "bundledDependencies": []
+  "bundledDependencies": [
+    "clever-users"
+  ]
 }

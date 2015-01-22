@@ -170,11 +170,11 @@ function define( Controller, AccountService, config, async, PermissionController
 
                                     if ( method === 'post' || method === 'put' ) {
                                         if ( !isAdmin || ( !!isAdmin && !accountId ) ) {
-                                            req.body[ user.Account.id ? 'AccountId' : 'Account' ]  = user.Account.id || user.Account._id;
+                                            req.body[ !/^[0-9a-fA-F]{24}$/.test( user.Account.id ) ? 'AccountId' : 'Account' ]  = user.Account.id || user.Account._id;
                                         }
                                     } else {
                                         if ( !isAdmin || ( !!isAdmin && !accountId ) ) {
-                                            req.query[ user.Account.id ? 'AccountId' : 'Account' ] = user.Account.id || user.Account._id;
+                                            req.query[ !/^[0-9a-fA-F]{24}$/.test( user.Account.id ) ? 'AccountId' : 'Account' ] = user.Account.id || user.Account._id;
                                         }
                                     }
 
@@ -184,7 +184,7 @@ function define( Controller, AccountService, config, async, PermissionController
                             } else {
                                 callback( null );
                             }
-                        }
+                        }   
                     ],
                     function( err ) {
                         if ( err === null ) {

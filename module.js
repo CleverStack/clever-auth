@@ -1,9 +1,9 @@
-var injector     = require( 'injector' )
-  , express      = injector.getInstance( 'express' )
-  , passport     = require( 'passport' )
-  , Module       = require( 'classes' ).Module;
+var injector    = require( 'injector' )
+  , express     = injector.getInstance( 'express' )
+  , passport    = require( 'passport' )
+  , Module      = require( 'classes' ).Module;
 
-module.exports = Module.extend({
+module.exports  = Module.extend({
 
     sessionStore: null,
 
@@ -66,21 +66,6 @@ module.exports = Module.extend({
         app.use( passport.session() );
 
         this.emit( 'appReady' );
-    },
-
-    preRoute: function( UserModel, AccountModel ) {
-        UserModel.on( 'preQuery', function( options ) {
-            var nestedInclude = {
-                model   : AccountModel._model
-            };
-
-            if ( typeof options.include === 'undefined' ) {
-                options.include = [];
-            }
-            if ( options.include.indexOf( nestedInclude ) === -1 ) {
-                options.include.push( nestedInclude );
-            }
-        });
     },
 
     preShutdown: function () {

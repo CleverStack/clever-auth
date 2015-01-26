@@ -1,56 +1,26 @@
 {
     "clever-auth": {
-        "secretKey": "",
+        "secretKey"             : "",
         
-        "driver": "ORM",
-        
-        "sessionStorageDriver": "redis",
+        "sessionStorageDriver"  : "redis",
 
         "redis": {
-            "host": "localhost",
-            "port": "6379",
-            "prefix": "",
-            "key": ""
+            "host"              : "localhost",
+            "port"              : "6379",
+            "prefix"            : "",
+            "key"               : ""
         },
 
         "memcache": {
-            "host": "localhost",
-            "port": "11211",
-            "prefix": ""
+            "host"              : "localhost",
+            "port"              : "11211",
+            "prefix"            : ""
         },
 
         "enabledStrategies": {
             "google": {
-                "returnUrl": "http://localhost:8080/google/return",
-                "realm": "http://localhost:8080/"
-            }
-        },
-
-        "requiresLogin": {
-            "all": true,
-            "postAction": false,
-            "recoverAction": false,
-            "confirmAction": false
-        },
-
-        "hostUrl": "http://localhost",
-
-        "email_confirmation": false,
-
-        "email": {
-          "driver": ""
-        },
-
-        "modelAssociations": {
-            "Account": {
-                "hasMany": [
-                    "User"
-                ]
-            },
-            "User": {
-                "belongsTo": [
-                    "Account"
-                ]
+                "returnUrl"     : "http://localhost:8080/google/return",
+                "realm"         : "http://localhost:8080/"
             }
         }
     }

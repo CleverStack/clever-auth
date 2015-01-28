@@ -1,7 +1,8 @@
-var injector    = require( 'injector' )
-  , express     = injector.getInstance( 'express' )
-  , passport    = require( 'passport' )
-  , Module      = require( 'classes' ).Module;
+var injector        = require( 'injector' )
+  , session         = require( 'express-session' )
+  , cookieParser    = require( 'cookie-parser' )
+  , passport        = require( 'passport' )
+  , Module          = require( 'classes' ).Module;
 
 module.exports  = Module.extend({
 
@@ -23,14 +24,14 @@ module.exports  = Module.extend({
         this.debug( 'Configuring connect-redis for use as session storage: ' + JSON.stringify( redisConfig ) );
 
         redisConfig.prefix = !!redisConfig.prefix ? redisConfig.prefix + env + '_' : env + '_';
-        this.sessionStore = new ( require( 'connect-redis' )( express ) )( redisConfig );
+        this.sessionStore = new ( require( 'connect-redis' )( session ) )( redisConfig );
     },
 
     setupMemcacheSessionStore: function( env, memcacheConfig ) {
         this.debug( 'Configuring connect-memcached for use as session storage: ' + JSON.stringify( memcacheConfig ) );
 
         memcacheConfig.prefix = !!memcacheConfig.prefix ? memcacheConfig.prefix + env + '_' : env + '_';
-        this.sessionStore = new ( require( 'connect-memcached' )( express.session ) )( memcacheConfig )
+        this.sessionStore = new ( require( 'connect-memcached' )( session ) )( memcacheConfig )
     },
 
     preInit: function() {
@@ -42,13 +43,15 @@ module.exports  = Module.extend({
 
     configureApp: function( app ) {
         this.debug( 'Configuring express to use the cookieParser...' );
-        app.use( express.cookieParser() );
+        app.use( cookieParser() );
         
         this.debug( 'Configuring session management...' );
 
         var sessionConfig = {
             secret: this.config.secretKey,
-            cookie: { secure: false, maxAge: 86400000 }
+            cookie: { secure: false, maxAge: 86400000 },
+            resave: false,
+            saveUninitialized: false
         };
 
         if ( this.config.sessionStorageDriver !== 'in-memory' ) {
@@ -56,7 +59,7 @@ module.exports  = Module.extend({
         }
 
         app.use( 
-            express.session( sessionConfig )
+            session( sessionConfig )
         );
 
         this.debug( 'Configuring passport initialize middleware...' );

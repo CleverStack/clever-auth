@@ -2,7 +2,7 @@ var crypto          = require( 'crypto' )
   , injector        = require( 'injector' )
   , LocalStrategy   = require( 'passport-local' ).Strategy;
 
-module.exports = function( config, Controller, passport, UserService ) {
+module.exports = function( config, Controller, passport, UserService, Promise, Exceptions ) {
     injector.instance( 'LocalStrategy', LocalStrategy );
 
     var AuthController = Controller.extend({
@@ -14,30 +14,27 @@ module.exports = function( config, Controller, passport, UserService ) {
         restfulRouting: false,
 
         localAuth: function( username, password, done ) {
-            var credentials = {
-                email: username,
-                password: crypto.createHash( 'sha1' ).update( password ).digest( 'hex' ),
-                confirmed: true,
-                active: true
-            };
-
-            UserService.authenticate( credentials )
-                .then(function( user ) {
-                    done( null, JSON.parse( JSON.stringify( user ) ) )
-                })
-                .catch( done );
+            UserService.authenticate({
+                email       : username,
+                password    : crypto.createHash( 'sha1' ).update( password ).digest( 'hex' )
+            })
+            .then(function( user ) {
+                done( null, JSON.parse( JSON.stringify( user ) ) );
+            })
+            .catch( done );
         },
 
-        authenticate: function( err, user ) {
+        authenticate: function( err, user, callback ) {
             if ( err !== null ) {
-                return this.handleServiceMessage( { statusCode: 400, message: err } );
+                err = { statusCode: 400, message: err };
+                return callback ? callback(err) : this.handleServiceMessage(err);
             }
 
             this.req.login( user, this.proxy( function( err ) {
                 if ( err ) {
-                    this.handleServiceMessage( err );
+                    return callback ? callback(err) : this.handleServiceMessage(err);
                 } else {
-                    this.send( user, 200 );
+                    return callback ? callback(null, user) : this.send( user, 200 );
                 }
             }));
         },
@@ -48,7 +45,7 @@ module.exports = function( config, Controller, passport, UserService ) {
         },
 
         updateSession: function( user ) {
-            if ( user.id && ( this.req.user.id === user.id ) ) {
+            if ( user.id && ( this.req.user && this.req.user.id === user.id ) ) {
                 AuthController.authenticate.apply( this, [ null, user ] );
                 return;
             }
@@ -73,20 +70,27 @@ module.exports = function( config, Controller, passport, UserService ) {
             var user    = this.req.user
               , reload  = this.req.query.reload || false;
 
-            if ( !user ) {
-                this.send( {}, 401 );
-                return;
-            }
+            return new Promise( function( resolve, reject ) {
+                if ( !user ) {
+                    reject( new Exceptions.Unauthorised( {} ) );
+                    return;
+                }
 
-            if ( !reload ) {
-                this.send( user, 200 );
-                return;
-            }
+                if ( !reload ) {
+                    resolve( user );
+                    return;
+                }
 
-            UserService
-                .find( user.id )
+                UserService.find({
+                    where: {
+                        id: user.id
+                    }
+                })
                 .then( this.proxy( 'updateSession' ) )
-                .catch( this.proxy( 'handleServiceMessage' ) );
+                .then( resolve )
+                .catch( reject );
+
+            }.bind( this ) );
         },
 
         signInAction: function () {

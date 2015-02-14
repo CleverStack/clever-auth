@@ -1,7 +1,7 @@
 {
   "name":         "clever-auth",
   "description":  "CleverStack Authentication Module",
-  "version":      "1.2.2",
+  "version":      "1.2.3",
   "main":         "module.js",
   "author": {
     "name":       "CleverStack",
@@ -23,10 +23,11 @@
     "cleverstack-module",
     "cleverstack-backend",
     "passport",
+    "local",
     "authentication",
     "google",
-    "google authentication",
-    "local authentication"
+    "passport-google",
+    ""
   ],
   "license":      "BSD-2-Clause",
   "dependencies": {
@@ -47,9 +48,5 @@
   },
   "scripts": {
     "test":       "grunt test:unit"
-  },
-  "bundledDependencies": [
-    "clever-accounts",
-    "clever-users"
-  ]
+  }
 }

@@ -1,7 +1,7 @@
 {
   "name"        : "clever-auth",
   "description" : "CleverStack Authentication Module",
-  "version"     : "1.2.3",
+  "version"     : "1.2.4",
   "license"     : "MIT",
   "main"        : "module",
   "author": {

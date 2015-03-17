@@ -1,22 +1,42 @@
 {
-  "name":         "clever-auth",
-  "description":  "CleverStack Authentication Module",
-  "version":      "1.2.3",
-  "main":         "module.js",
+  "name"        : "clever-auth",
+  "description" : "CleverStack Authentication Module",
+  "version"     : "1.2.3",
+  "license"     : "MIT",
+  "main"        : "module",
   "author": {
-    "name":       "CleverStack",
-    "email":      "admin@cleverstack.io",
-    "web":        "http://cleverstack.io"
+    "name"      : "CleverStack",
+    "email"     : "admin@cleverstack.io",
+    "web"       : "http://cleverstack.io"
   },
   "collaborators": [
     "Richard Gustin <richard.gustin86@gmail.com>"
   ],
   "repository": {
-    "type":       "git",
-    "url":        "git://github.com/CleverStack/clever-auth.git"
+    "type"      : "git",
+    "url"       : "git://github.com/CleverStack/clever-auth.git"
   },
   "bugs": {
-    "url":        "https://github.com/CleverStack/clever-auth/issues"
+    "url"       : "https://github.com/CleverStack/clever-auth/issues"
+  },
+  "scripts": {
+    "test"      : "grunt test:unit"
+  },
+  "dependencies": {
+    "passport"           : "^0.2.1",
+    "passport-google"    : "~0.3.0",
+    "passport-local"     : "~1.0.0",
+    "connect"            : "^2.13.0",
+    "connect-redis"      : "~2.2.0",
+    "connect-memcached"  : "~0.1.0",
+    "redis"              : "~0.12.1",
+    "moment"             : "~2.8.4",
+    "express-session"    : "~1.10.1",
+    "cookie-parser"      : "~1.3.3"
+  },
+  "devDependencies": {
+    "grunt"              : "~0.4.2",
+    "grunt-prompt"       : "~1.3.0"
   },
   "keywords": [
     "cleverstack",
@@ -26,27 +46,6 @@
     "local",
     "authentication",
     "google",
-    "passport-google",
-    ""
-  ],
-  "license":      "BSD-2-Clause",
-  "dependencies": {
-    "passport":           "^0.2.1",
-    "passport-google":    "~0.3.0",
-    "passport-local":     "~1.0.0",
-    "connect":            "^2.13.0",
-    "connect-redis":      "~2.2.0",
-    "connect-memcached":  "~0.1.0",
-    "redis":              "~0.12.1",
-    "moment":             "~2.8.4",
-    "express-session":    "~1.10.1",
-    "cookie-parser":      "~1.3.3"
-  },
-  "devDependencies": {
-    "grunt":              "~0.4.2",
-    "grunt-prompt":       "~1.3.0"
-  },
-  "scripts": {
-    "test":       "grunt test:unit"
-  }
+    "passport-google"
+  ]
 }

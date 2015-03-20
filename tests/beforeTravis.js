@@ -126,20 +126,19 @@ function installAuthModule() {
   step++;
   return new Promise(function(resolve, reject) {
     var objs = [
-        { reg: /Default Username\: \(default\)/, write: '\n', done: false },
-        { reg: /Default Users Password\: /, write: '\n', done: false },
-        { reg: /Overwrite existing user with the same username\? \(Y\/n\)/, write: '\n', done: false },
-        { reg: /Default Users Email\: \(default@cleverstack.io\)/, write: '\n', done: false },
-        { reg: /Default Users Firstname\: \(Clever\)/, write: '\n', done: false },
-        { reg: /Default Users Lastname\: \(User\)/, write: '\n', done: false },
-        { reg: /Default Users Phone Number\:/, write: '\n', done: false },
-        { reg: /Default User has admin rights\: \(Y\/n\)/, write: '\n', done: false },
-        { reg: /Default User has confirmed their email\: \(Y\/n\)/, write: '\n', done: false },
-        { reg: /Default User has an active account\: \(Y\/n\)/, write: '\n', done: false }
+        { reg: /Overwrite existing user with the same username\?/, write: '\n', done: false },
+        { reg: /What environment is this configuration for\?/, write: '\n', done: false },
+        { reg: /Secret key used to secure your passport sessions/, write: '\n', done: false },
+        { reg: /What database driver module to use\: \(Use arrow keys\)/, write: '\n', done: false },
+        { reg: /Session Storage Driver\: \(Use arrow keys\)/, write: '\n', done: false },
+        { reg: /Redis host\: \(localhost\)/, write: '\n', done: false },
+        { reg: /Redis port\: \(6379\)/, write: '\n', done: false },
+        { reg: /Redis prefix\:/, write: '\n', done: false },
+        { reg: /Redis key\:/, write: '\n', done: false }
       ]
       , proc = spawn('grunt', [ 'prompt:cleverAuthConfig' ], { cwd: path.join(__dirname, '../', prName) });
 
-    console.log('step #' + step + ' - install clever-users module - begin\n');
+    console.log('step #' + step + ' - install clever-auth module - begin\n');
 
     proc.stdout.on('data', function (data) {
       var str = data.toString();
@@ -171,9 +170,9 @@ function installAuthModule() {
 function copyAuthModule() {
   return new Promise(function(resolve, reject) {
     var fromDir     = path.join(__dirname, '../')
-      , toDir       = path.join(__dirname, '../', prName, 'modules', 'clever-users');
+      , toDir       = path.join(__dirname, '../', prName, 'modules', 'clever-auth');
 
-    console.log('step #' + step + ' - copy clever-users module in test project - begin\n');
+    console.log('step #' + step + ' - copy clever-auth module in test project - begin\n');
 
     function copyDir(from, to) {
       var files = fs.readdirSync(from);
@@ -375,11 +374,11 @@ function rebaseDb() {
 createProject()
   .then(installORM)
   .then(installTestModule)
+  .then(copyAuthModule)
   .then(installAuthModule)
   .then(installAccountsModule)
   .then(installRolesModule)
   .then(installUsersModule)
-  .then(copyAuthModule)
   .then(cleverSetup)
   .then(rebaseDb)
   .catch (function (err) {

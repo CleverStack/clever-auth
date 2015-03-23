@@ -36,7 +36,7 @@
     "passport-linkedin-oauth2" : "~1.2.1",
     "passport-dropbox-oauth2"  : "~0.1.6",
     "passport-facebook"        : "~2.0.0",
-    "passport-github"          : "~0.1.5"
+    "passport-github"          : "~0.1.5",
     "passport-twitter"         : "~1.0.3"
   },
   "devDependencies": {

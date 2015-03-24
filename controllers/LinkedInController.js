@@ -1,58 +1,40 @@
-var LinkedInStrategy  = require('passport-linkedin-oauth2').Strategy
-  , injector          = require('injector');
+var Strategy   = require('passport-linkedin-oauth2').Strategy
+  , injector   = require('injector')
+  , qs         = require('qs');
 
 module.exports = function(Controller, AuthController, UserService, cleverAuth, passport) {
-  var linkedInEnabled = !!cleverAuth.config.enabledStrategies && !!cleverAuth.config.enabledStrategies.linkedin
-    , linkedInConfig  = !!googleEnabled ? cleverAuth.config.enabledStrategies.linkedin : false
-    , scope           = ['r_emailaddress', 'r_basicprofile']
-    , state           = +new Date() + ''
+  var enabled  = !!cleverAuth.config.enabledStrategies && !!cleverAuth.config.enabledStrategies.linkedIn
+    , config   = !!enabled ? cleverAuth.config.enabledStrategies.linkedIn : false
+    , state    = +new Date() + '';
 
   return Controller.extend({
+    route          : '[GET,POST] /auth/linkedIn/?:action?/?',
+    autoRouting    : enabled,
     restfulRouting : false,
-    route          : '[GET,POST] /auth/linkedin/?:action/??',
-    autoRouting    : linkedInEnabled,
 
     setup: function() {
-      if (!!googleEnabled) {
-        injector.instance('LinkedInStrategy', LinkedInStrategy);
+      if (!!enabled) {
+        injector.instance('LinkedInStrategy', Strategy);
 
-        passport.use(new LinkedInStrategy({
+        passport.use(
+          new Strategy({
             state        : state,
-            scope        : scope,
-            clientID     : linkedInConfig.AppKey,
-            callbackURL  : linkedInConfig.redirectURIs,
-            clientSecret : linkedInConfig.AppSecret
-        },
-        function(accessToken, refreshToken, profile, done) {
-
-            UserLinkedinService
-                .findOrCreate( profile, accessToken )
-                .then( function( gUser ) {
-                    return UserLinkedinService.authenticate ( gUser, profile )
-                })
-                .then( UserLinkedinService.updateAccessedDate )
-                .then( done.bind( null, null ) )
-                .fail( done );
-        }));
-          new LinkedInStrategy({
-            returnURL:  googleConfig.returnUrl,
-            realm:      googleConfig.realm
+            scope        : config.scope,
+            clientID     : config.AppKey,
+            callbackURL  : config.redirectURIs,
+            clientSecret : config.AppSecret
           },
-          this.callback('linkedinLogin'))
-       );
+          this.callback('linkedInLogin'))
+        );
       }
 
       return this._super.apply(this, arguments);
     },
 
-    linkedinLogin: function(identifier, user, done) {
+    linkedInLogin: function(accessToken, refreshToken, profile, done) {
+      // @todo - does this actually work?
       UserService
-        .findOrCreate({
-          email            : user.emails[0].value,
-          firstName        : user.name.givenName,
-          lastName         : user.name.familyName,
-          googleIdentifier : identifier
-        })
+        .findOrCreate(profile, accessToken)
         .then(done)
         .catch(done.bind(null));
     }
@@ -60,14 +42,14 @@ module.exports = function(Controller, AuthController, UserService, cleverAuth, p
   {
     signInAction: function () {
       var params = {
-          response_type: "code",
-          client_id: linkedInConfig.AppKey,
-          redirect_uri: linkedInConfig.redirectURIs,
-          state: state,
-          scope: scope
+        state           : state,
+        scope           : config.scope,
+        'client_id'     : config.AppKey,
+        'redirect_uri'  : config.redirectURIs,
+        'response_type' : 'code',
       };
 
-      this.send( { url: 'https://www.linkedin.com/uas/oauth2/authorization?' + qs.stringify( params ) }, 200 );
+      this.send({url: 'https://www.linkedin.com/uas/oauth2/authorization?' + qs.stringify(params)}, 200);
     },
 
     returnAction: function () {

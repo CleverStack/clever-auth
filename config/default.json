@@ -22,7 +22,8 @@
         "returnUrl"    : "http://localhost:8080/auth/google/return",
         "realm"        : "http://localhost:8080/"
       },
-      "linkedin": {
+      "linkedIn": {
+        "scope"        : ["r_emailaddress", "r_basicprofile"],
         "AppKey"       : "77dnae99wih7t1",
         "AppSecret"    : "Llr2J8zlPnrYWNSn",
         "redirectURIs" : "http://localhost:8080/auth/linkedin/return"

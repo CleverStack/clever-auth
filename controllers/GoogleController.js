@@ -1,23 +1,23 @@
-var GoogleStrategy  = require('passport-google').Strategy
-  , injector        = require('injector');
+var Strategy   = require('passport-google').Strategy
+  , injector   = require('injector');
 
 module.exports = function(Controller, AuthController, UserService, cleverAuth, passport) {
-  var googleEnabled = !!cleverAuth.config.enabledStrategies && !!cleverAuth.config.enabledStrategies.google
-    , googleConfig  = !!googleEnabled ? cleverAuth.config.enabledStrategies.google : false;
+  var enabled  = !!cleverAuth.config.enabledStrategies && !!cleverAuth.config.enabledStrategies.google
+    , config   = !!enabled ? cleverAuth.config.enabledStrategies.google : false;
 
   return Controller.extend({
-    restfulRouting : false,
     route          : '[GET,POST] /auth/google/:action/?',
-    autoRouting    : googleEnabled,
+    autoRouting    : enabled,
+    restfulRouting : false,
 
     setup: function() {
-      if (!!googleEnabled) {
-        injector.instance('GoogleStrategy', GoogleStrategy);
+      if (!!enabled) {
+        injector.instance('GoogleStrategy', Strategy);
 
         passport.use(
-          new GoogleStrategy({
-            returnURL:  googleConfig.returnUrl,
-            realm:      googleConfig.realm
+          new Strategy({
+            realm     : config.realm,
+            returnURL : config.returnUrl
           },
           this.callback('googleLogin'))
        );

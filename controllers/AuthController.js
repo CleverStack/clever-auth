@@ -7,9 +7,7 @@ module.exports = function(config, Controller, passport, UserService, Promise, Ex
 
   var AuthController = Controller.extend({
 
-    route: [
-      '[GET,POST] /auth/?:action?'
-    ],
+    route: '[GET,POST] /auth/?:action?',
 
     restfulRouting: false,
 

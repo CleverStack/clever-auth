@@ -1,16 +1,16 @@
-var injector        = require('injector')
-  , session         = require('express-session')
-  , cookieParser    = require('cookie-parser')
-  , passport        = require('passport')
-  , Module          = require('classes').Module;
+var injector     = require('injector')
+  , session      = require('express-session')
+  , passport     = require('passport')
+  , cookieParser = require('cookie-parser')
+  , Module       = require('classes').Module;
 
-var cleverAuthModule = Module.extend({
+var AuthModule   = Module.extend({
 
   sessionStore: null,
 
   preSetup: function () {
-    var env          = process.env.NODE_ENV ? process.env.NODE_ENV : 'local'
-      , storeDriver  = this.config.store;
+    var env           = process.env.NODE_ENV ? process.env.NODE_ENV : 'local'
+      , storeDriver   = this.config.store;
 
     this.debug('Using ' + storeDriver + ' as store...');
     if (storeDriver === 'redis') {
@@ -24,14 +24,14 @@ var cleverAuthModule = Module.extend({
     this.debug('Configuring connect-redis for use as session storage: ' + JSON.stringify(redisConfig));
 
     redisConfig.prefix = !!redisConfig.prefix ? redisConfig.prefix + env + '_' : env + '_';
-    this.sessionStore = new (require('connect-redis')(session))(redisConfig);
+    this.sessionStore  = new (require('connect-redis')(session))(redisConfig);
   },
 
   setupMemcacheSessionStore: function(env, memcacheConfig) {
     this.debug('Configuring connect-memcached for use as session storage: ' + JSON.stringify(memcacheConfig));
 
     memcacheConfig.prefix = !!memcacheConfig.prefix ? memcacheConfig.prefix + env + '_' : env + '_';
-    this.sessionStore = new (require('connect-memcached')(session))(memcacheConfig);
+    this.sessionStore     = new (require('connect-memcached')(session))(memcacheConfig);
   },
 
   preInit: function() {
@@ -75,4 +75,4 @@ var cleverAuthModule = Module.extend({
   }
 });
 
-module.exports = cleverAuthModule;
+module.exports = AuthModule;

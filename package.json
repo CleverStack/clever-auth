@@ -24,7 +24,6 @@
   },
   "dependencies": {
     "passport"                 : "^0.2.1",
-    "passport-google"          : "~0.3.0",
     "passport-local"           : "~1.0.0",
     "connect"                  : "^2.13.0",
     "connect-redis"            : "~2.2.0",
@@ -32,12 +31,7 @@
     "redis"                    : "~0.12.1",
     "moment"                   : "~2.8.4",
     "express-session"          : "~1.10.1",
-    "cookie-parser"            : "~1.3.3",
-    "passport-linkedin-oauth2" : "~1.2.1",
-    "passport-dropbox-oauth2"  : "~0.1.6",
-    "passport-facebook"        : "~2.0.0",
-    "passport-github"          : "~0.1.5",
-    "passport-twitter"         : "~1.0.3"
+    "cookie-parser"            : "~1.3.3"
   },
   "devDependencies": {
     "grunt"                    : "~0.4.2",
@@ -49,8 +43,6 @@
     "cleverstack-backend",
     "passport",
     "local",
-    "authentication",
-    "google",
-    "passport-google"
+    "authentication"
   ]
 }

@@ -2,7 +2,7 @@ var crypto          = require('crypto')
   , injector        = require('injector')
   , LocalStrategy   = require('passport-local').Strategy;
 
-module.exports = function(config, Controller, passport, UserService, Promise, Exceptions) {
+module.exports      = function(config, Controller, passport, UserService, Promise, Exceptions) {
   injector.instance('LocalStrategy', LocalStrategy);
 
   var AuthController = Controller.extend({

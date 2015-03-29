@@ -4,87 +4,99 @@ CleverStack Authentication Module
 
 ![CleverStack NodeJS Authentication Module](http://cleverstack.github.io/assets/img/logos/node-seed-logo-clean.png "CleverStack NodeJS Authentication Module")
 <blockquote>
-This CleverStack Module provides users & authentication for the node-seed, it works with either the Object Relational Mapper (clever-orm) AND the Object Document Mapper (clever-odm) Module's.
-
-Out of the box you can use this module with MongoDB, MySQL, MariaDB, PostgreSQL or SQLite! And because this module uses Redis for session storage it's also scalable.
+This CleverStack Module provides easy to use,  easy to configure, reliable and scalable Authentication System that allows you to (within minutes) have authentication via Google, Facebook, Github, LinkedIn, and many more...
 </blockquote>
 
-## Documentation
+## Highlights
+* Works with both the `clever-orm` and the `clever-odm` modules.
+* Easy to use configuration prompts, `grunt prompt:cleverAuthConfig`.
+* Easily installed using the CleverStack CLI, `clever install clever-auth`.
+* Easily extend `clever-auth` with new Authentication Providers that are not implemented yet.
+* Use with the `clever-users` module - OR - with any other module that exports the `UserController`, `UserService` and `UserModel` resources/classes.
+* Authentication Strategies: Github, LinkedIn, Facebook, Twitter, Dropbox, Google - as well as local authentication out of the box.
 
-See [cleverstack.io](http://cleverstack.io/documentation/#backend) for more detailed information on the Node seed or visit the [Getting Started Guide](http://cleverstack.io/getting-started/)
 
-## Configuration
-You can use this module with either the clever-orm (ORM) or clever-odm (ODM) modules, simply add the following config to your /config/local.json (or into your global.json for all environments, or in whatever environment you are using).
+## Prerequisites
+  1. You must be using [cleverstack-cli](https://github.com/CleverStack/cleverstack-cli) version [1.2.2](https://github.com/CleverStack/cleverstack-cli/releases/tag/1.2.2) or newer.
+  2. Your project must be using [node-seed](https://github.com/CleverStack/node-seed) version [1.2.1](https://github.com/CleverStack/node-seed/releases/tag/1.2.1) or newer.
+  3. You must either install the [clever-users](https://github.com/CleverStack/clever-users) module, or any other module that provides the `UserController`, `UserService` and `UserModel` resources/classes.
 
-### Grunt
-1. `grunt prompt:cleverAuthConfig` can be used to generate your config for any environment you want
-2. `grunt prompt:cleverAuthSeed` can be used to add/edit users inside your seed data
 
-### Configuration files
-
-```
-// For ODM
-"clever-auth": {
-  	"driver": "ODM"
-}
-
-// For ORM
-"clever-auth": {
-  	"driver": "ORM"
-}
-
-// Using In-Memory Session Storage
-"clever-auth": {
-  	"sessionStoreDriver": "in-memory"
-}
-
-// Using Redis for Session Storage
-"clever-auth": {
-  	"sessionStoreDriver": "redis",
-    "redis": {
-        "host": "localhost",
-        "port": "6379",
-        "prefix": "",
-        "key": ""
-    }
-}
-
-// Using Memcache for Session Storage
-"clever-auth": {
-  	"sessionStoreDriver": "redis",
-    "memcache": {
-        "host": "localhost",
-        "port": "11211",
-        "prefix": ""
-    }
-}
-```
-
-## Setup
+## Installation
 
 ### Using CLI
 1. Run `clever install clever-auth` and follow the prompts
 2. Run `clever serve` to start your application.
 
 ### Without CLI
-1. Clone this repo (or untar it there) into your modules folder (ie modules/clever-auth)
-2. Add 'clever-auth' to the bundledDependencies array of your app's package.json.
+1. Clone this repo (or untar it there) into your modules folder (ie `modules/clever-auth`)
 3. Run `grunt prompt:cleverAuthConfig` and fill in your configuration options.
-4. Run `grunt prompt:cleverAuthSeed` and create your default user.
 5. Run `grunt db` to rebase and seed the data.
 6. Run `grunt server` to start your application.
 
-## Rebuilding (rebasing) and Seeding your database
-1. `grunt db:rebaseOrm` will rebase your ORM database (delete and completely replace all tables)
-2. `grunt db:seedOrm` will seed data into your ORM database
-3. `grunt db:orm` will perform both of the above tasks
 
-Note: You can just run `grunt db`, `grunt db:rebase` and `grunt db:seed` but if the ODM module is installed it will perform these operations on that DB as well (which might be exactly what your looking for)
 
-## Test Account Credentials
+## Configuration
 
-username: `test@cleverstack.io` <br>
-password: `clever`
+### Files
+For more information about how modules (including clever-auth) are configured, please see the [cleverstack.io](http://cleverstack.io/documentation/backend) Documentation sections, [Backend Configuration](http://localhost:9001/documentation/backend/#configuration) and [Module Configuration](http://localhost:9001/documentation/backend/modules/#configuration) for more information.
+
+### Grunt prompts
+1. `grunt prompt:cleverAuthConfig` can be used to generate your config for any environment you want.
+
+### Options
+#### `store` - Session Store Driver
+
+##### `in-memory` - Using the In-Memory Session Store.
+```
+{
+  "clever-auth": {
+  "store"    : "in-memory"
+  }
+}
+```
+
+##### `redis` - Using Redis to Store Sessions. (implemented using `connect-redis`)
+```
+{
+  "clever-auth": {
+  "store"    : "redis",
+  "redis": {
+      "key"    : "",
+      "port"   : "6379",
+      "host"   : "localhost",
+      "prefix" : ""
+    }
+  }
+}
+```
+
+##### `memcache` - Using Memcache to Store Sessions. (implemented using `connect-memcached`)
+```
+{
+  "clever-auth": {
+  "store"    : "memcache",
+    "memcache": {
+      "host"   : "localhost",
+      "port"   : "11211",
+      "prefix" : ""
+    }
+  }
+}
+```
+
+#### `secretKey` - extra salt to be used to help secure any cookies.
+```
+{
+  "clever-auth": {
+    "secretKey": "",
+  }
+}
+```
+
+## Documentation
+
+See [cleverstack.io](http://cleverstack.io/documentation/#backend) for more detailed information on the Node Seed or visit the [Getting Started Guide](http://cleverstack.io/getting-started/) if you have never used CleverStack before.
 
 ## License
 

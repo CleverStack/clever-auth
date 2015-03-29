@@ -10,9 +10,9 @@ var cleverAuthModule = Module.extend({
 
   preSetup: function () {
     var env          = process.env.NODE_ENV ? process.env.NODE_ENV : 'local'
-      , storeDriver  = this.config.sessionStorageDriver
+      , storeDriver  = this.config.store;
 
-    this.debug('Using ' + storeDriver + ' as sessionStorageDriver...')
+    this.debug('Using ' + storeDriver + ' as store...');
     if (storeDriver === 'redis') {
       this.setupRedisSessionStore(env, this.config.redis);
     } else if (storeDriver === 'memcache') {
@@ -31,14 +31,14 @@ var cleverAuthModule = Module.extend({
     this.debug('Configuring connect-memcached for use as session storage: ' + JSON.stringify(memcacheConfig));
 
     memcacheConfig.prefix = !!memcacheConfig.prefix ? memcacheConfig.prefix + env + '_' : env + '_';
-    this.sessionStore = new (require('connect-memcached')(session))(memcacheConfig)
+    this.sessionStore = new (require('connect-memcached')(session))(memcacheConfig);
   },
 
   preInit: function() {
     this.debug('Adding passport and sessionStore to the injector...');
 
     injector.instance('passport', passport);
-    injector.instance('sessionStore', this.sessionStore)
+    injector.instance('sessionStore', this.sessionStore);
   },
 
   configureApp: function(app) {
@@ -54,7 +54,7 @@ var cleverAuthModule = Module.extend({
       saveUninitialized: false
     };
 
-    if (this.config.sessionStorageDriver !== 'in-memory') {
+    if (this.config.store !== 'in-memory') {
       sessionConfig.store = this.sessionStore;
     }
 

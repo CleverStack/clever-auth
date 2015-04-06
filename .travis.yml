@@ -13,6 +13,7 @@ before_install:
   - npm install ncp
   - npm install rimraf
   - npm install bluebird
+  - rm -rf node_modules/clever-users
 
 env:
   - NODE_ENV=test; NODE_PATH=./lib/:./modules/
@@ -20,7 +21,7 @@ env:
 before_script:
   - mysql -e 'create database test_db;'
   - node tests/beforeTravis.js
-  - cd testProject
+  - cd tests/assets/testProject
 
 services:
   - mysql

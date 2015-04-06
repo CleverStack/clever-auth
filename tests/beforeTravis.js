@@ -10,7 +10,7 @@ var Promise = require('bluebird')
 function createProject() {
   step++;
   return new Promise(function(resolve, reject) {
-    var proc = spawn('clever', [ 'init', '-f', '-A', prName, 'backend' ]);
+    var proc = spawn('clever', [ 'init', '-f', '-A', prName, 'backend' ], {cwd: path.resolve(path.join(__dirname, 'assets'))});
 
     console.log('step #' + step + ' - create test project - begin');
 
@@ -36,7 +36,7 @@ function createProject() {
 
 function cleverSetup() {
   return new Promise(function(resolve, reject) {
-    var proc = spawn ('clever', [ 'setup' ], { cwd: path.resolve(path.join(__dirname, '..', prName)) });
+    var proc = spawn ('clever', [ 'setup' ], { cwd: path.resolve(path.join(__dirname, 'assets', prName)) });
     console.log('step #' + step + ' - clever setup');
 
     proc.stderr.on('data', function (data) {
@@ -54,8 +54,8 @@ function cleverSetup() {
 function installTestModule() {
   step++;
   return new Promise(function(resolve, reject) {
-    var source      = path.resolve(path.join(__dirname, '../', prName, 'tests', 'unit', 'test-module'))
-      , dest        = path.resolve(path.join(__dirname, '../', prName, 'modules', 'test-module'));
+    var source      = path.resolve(path.join(__dirname, 'assets', prName, 'tests', 'unit', 'test-module'))
+      , dest        = path.resolve(path.join(__dirname, 'assets', prName, 'modules', 'test-module'));
 
     console.log('step #' + step + ' - install test-module - begin');
 
@@ -91,7 +91,7 @@ function installORM() {
         { reg: /Database host/     , write: '127.0.0.1\n', done: false },
         { reg: /Database port/     , write: '3306\n'     , done: false }
       ]
-      , proc = spawn ('clever', [ 'install', 'clever-orm' ], { cwd: path.join(__dirname, '../', prName) });
+      , proc = spawn ('clever', [ 'install', 'clever-orm' ], { cwd: path.join(__dirname, 'assets', prName) });
 
     console.log('step #' + step + ' - install clever-orm module - begin');
 
@@ -136,7 +136,7 @@ function installAuthModule() {
         { reg: /Redis prefix\:/, write: '\n', done: false },
         { reg: /Redis key\:/, write: '\n', done: false }
       ]
-      , proc = spawn('grunt', [ 'prompt:cleverAuthConfig' ], { cwd: path.join(__dirname, '../', prName) });
+      , proc = spawn('grunt', [ 'prompt:cleverAuthConfig' ], { cwd: path.join(__dirname, 'assets', prName) });
 
     console.log('step #' + step + ' - install clever-auth module - begin\n');
 
@@ -170,7 +170,7 @@ function installAuthModule() {
 function copyAuthModule() {
   return new Promise(function(resolve, reject) {
     var fromDir     = path.join(__dirname, '../')
-      , toDir       = path.join(__dirname, '../', prName, 'modules', 'clever-auth');
+      , toDir       = path.join(__dirname, 'assets', prName, 'modules', 'clever-auth');
 
     console.log('step #' + step + ' - copy clever-auth module in test project - begin\n');
 
@@ -236,7 +236,7 @@ function installAccountsModule() {
   step++;
   return new Promise(function(resolve, reject) {
     var objs = []
-      , proc = spawn('clever', [ 'install', 'clever-accounts' ], { cwd: path.join(__dirname, '../', prName) });
+      , proc = spawn('clever', [ 'install', 'clever-accounts' ], { cwd: path.join(__dirname, 'assets', prName) });
 
     console.log('step #' + step + ' - install clever-accounts module - begin\n');
 
@@ -271,7 +271,7 @@ function installRolesModule() {
   step++;
   return new Promise(function(resolve, reject) {
     var objs = []
-      , proc = spawn('clever', [ 'install', 'clever-roles' ], { cwd: path.join(__dirname, '../', prName) });
+      , proc = spawn('clever', [ 'install', 'clever-roles' ], { cwd: path.join(__dirname, 'assets', prName) });
 
     console.log('step #' + step + ' - install clever-roles module - begin\n');
 
@@ -317,7 +317,7 @@ function installUsersModule() {
         { reg: /Default User has confirmed their email\: \(Y\/n\)/, write: '\n', done: false },
         { reg: /Default User has an active account\: \(Y\/n\)/, write: '\n', done: false }
       ]
-      , proc = spawn('clever', [ 'install', 'clever-users' ], { cwd: path.join(__dirname, '../', prName) });
+      , proc = spawn('clever', [ 'install', 'clever-users' ], { cwd: path.join(__dirname, 'assets', prName) });
 
     console.log('step #' + step + ' - install clever-users module - begin\n');
 
@@ -351,7 +351,7 @@ function installUsersModule() {
 function rebaseDb() {
   step++;
   return new Promise(function(resolve, reject) {
-    var proc = spawn('grunt', [ 'db' ], { cwd: path.join(__dirname, '../', prName) });
+    var proc = spawn('grunt', [ 'db' ], { cwd: path.join(__dirname, 'assets', prName) });
 
     console.log('step #' + step + ' - rebase db');
 
@@ -381,6 +381,10 @@ createProject()
   .then(installUsersModule)
   .then(cleverSetup)
   .then(rebaseDb)
+  .then(function() {
+    console.log('Success.');
+    process.exit(0);
+  })
   .catch (function (err) {
     console.error('Error - ' + err);
   });

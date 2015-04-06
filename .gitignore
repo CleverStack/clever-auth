@@ -13,3 +13,4 @@ docs
 nohup.out
 cache.json
 .npmignore
+tests/assets/testProject*

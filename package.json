@@ -23,6 +23,7 @@
     "test"      : "grunt test:unit"
   },
   "dependencies": {
+    "qs"                : "~2.x",
     "passport"          : "^0.2.1",
     "passport-local"    : "~1.0.0",
     "connect"           : "^2.13.0",

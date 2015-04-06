@@ -38,9 +38,6 @@
     "grunt"             : "~0.4.2",
     "grunt-prompt"      : "~1.3.0"
   },
-  "peerDependencies": {
-    "clever-users"      : "~1.2.x"
-  },
   "keywords": [
     "cleverstack",
     "cleverstack-module",

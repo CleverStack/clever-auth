@@ -163,6 +163,7 @@ module.exports    = {
     grunt.loadNpmTasks('grunt-prompt');
     
     grunt.registerTask('prompt:cleverAuthConfig', ['prompt:authConfigPrompt', 'createCleverAuthConfig']);
+    grunt.registerTask('prompt:cleverAuthConfigPrompt', ['prompt:authConfigPrompt', 'createCleverAuthConfig']);
     grunt.registerTask('createCleverAuthConfig', 'Adds the config for cleverAuth to the designated environment', function createCleverAuthConfig() {
       var conf = grunt.config('authConfig');
 
